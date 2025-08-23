@@ -1,0 +1,24 @@
+// 🔒 SECURITY NOTICE: This file contains sensitive API keys
+// DO NOT commit this file to version control
+// This file should be added to .gitignore
+
+class ApiKeys {
+  // Gemini AI API Key
+  static const String geminiApiKey = 'YOUR API KEY HERE';
+  
+  // Base URL for Gemini API
+  static const String geminiBaseUrl = 'https://generativelanguage.googleapis.com/v1beta';
+  
+  // Model configurations
+  static const String geminiModel = 'gemini-2.0-flash';
+  
+  // API endpoints
+  static const String generateContentEndpoint = '/models/$geminiModel:generateContent';
+}
+
+// 🛡️ SECURITY BEST PRACTICES:
+// 1. Add this file to .gitignore
+// 2. Use environment variables in production
+// 3. Never log API keys
+// 4. Rotate keys regularly
+// 5. Use different keys for development/production
