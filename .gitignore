@@ -58,6 +58,8 @@ lib/firebase_options.dart
 lib\firebase_options.dart
 android/app/google-services.json
 android\app\google-services.json
+android/app/google-services.json.example
+android\app\google-services.json.example
 
 .vscode
 .zencoder
