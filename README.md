@@ -29,6 +29,10 @@
 
 MindMate (AuraCare) is a comprehensive mental wellness Flutter application that combines beautiful liquid glass-morphism UI with powerful AI-driven features for mood tracking, emotional support, meditation, and community connection. Built with a focus on psychological comfort and therapeutic aesthetics.
 
+<p align="center">
+  <iframe width="560" height="315" src="https://www.youtube.com/embed/vK1_Uq66uIA?si=vqj7AIXXQ8ndZmlG" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+</p>
+
 ## 🎯 **Project Status: Phase 2 Development (75% Complete)**
 
 - ✅ **Phase 1 Complete**: Authentication, Home Dashboard, Mood Tracking, AI Chat with **Full Personalization**
