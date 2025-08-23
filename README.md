@@ -1,11 +1,31 @@
 # 🌟 MindMate (AuraCare) - Mental Wellness & Emotional Support App
 
+<p align="center">
+  <img src="assets/images/icon.jpg" alt="MindMate Logo" width="150" height="150" style="border-radius: 80px;"/>
+</p>
+
 **"Your Mood, Your Mate, Your Mind"**
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.27.4-blue.svg)](https://flutter.dev/)
+[![Dart](https://img.shields.io/badge/Dart-3.6.2-blue.svg)](https://dart.dev/)
 [![Firebase](https://img.shields.io/badge/Firebase-Integrated-orange.svg)](https://firebase.google.com/)
+[![Gemini AI](https://img.shields.io/badge/Gemini%20AI-Integrated-purple.svg)](https://ai.google.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)](#)
+[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20Web%20%7C%20Desktop-lightgrey.svg)](#)
+[![UI](https://img.shields.io/badge/UI-Glass--morphism-cyan.svg)](#)
+[![Mental Health](https://img.shields.io/badge/Focus-Mental%20Health-pink.svg)](#)
+[![Version](https://img.shields.io/badge/Version-1.0.0-blue.svg)](#)
+
+<!-- GitHub Repository Stats -->
+[![GitHub Stars](https://img.shields.io/github/stars/abhishek-maurya576/auracare.svg?style=social)](https://github.com/abhishek-maurya576/auracare/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/abhishek-maurya576/auracare.svg?style=social)](https://github.com/abhishek-maurya576/auracare/network/members)
+[![GitHub Issues](https://img.shields.io/github/issues/abhishek-maurya576/auracare.svg)](https://github.com/abhishek-maurya576/auracare/issues)
+[![GitHub Pull Requests](https://img.shields.io/github/issues-pr/abhishek-maurya576/auracare.svg)](https://github.com/abhishek-maurya576/auracare/pulls)
+[![GitHub Last Commit](https://img.shields.io/github/last-commit/abhishek-maurya576/auracare.svg)](https://github.com/abhishek-maurya576/auracare/commits/main)
+[![GitHub Repo Size](https://img.shields.io/github/repo-size/abhishek-maurya576/auracare.svg)](https://github.com/abhishek-maurya576/auracare)
+[![GitHub Contributors](https://img.shields.io/github/contributors/abhishek-maurya576/auracare.svg)](https://github.com/abhishek-maurya576/auracare/graphs/contributors)
+[![GitHub Watchers](https://img.shields.io/github/watchers/abhishek-maurya576/auracare.svg?style=social)](https://github.com/abhishek-maurya576/auracare/watchers)
 
 MindMate (AuraCare) is a comprehensive mental wellness Flutter application that combines beautiful liquid glass-morphism UI with powerful AI-driven features for mood tracking, emotional support, meditation, and community connection. Built with a focus on psychological comfort and therapeutic aesthetics.
 
