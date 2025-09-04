@@ -5,8 +5,11 @@ import '../widgets/glass_widgets.dart';
 import '../providers/auth_provider.dart';
 import '../providers/mood_provider.dart';
 import '../models/user_model.dart';
+import '../utils/avatar_utils.dart';
 import 'insights_screen.dart';
 import 'settings_screen.dart';
+import 'edit_profile_screen.dart';
+import 'privacy_settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -22,6 +25,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     // Load mood data for statistics
     WidgetsBinding.instance.addPostFrameCallback((_) {
       provider.Provider.of<MoodProvider>(context, listen: false).loadMoodHistory();
+      
+      // Debug user photo URL
+      final user = provider.Provider.of<AuthProvider>(context, listen: false).user;
+      if (user != null) {
+        print('ProfileScreen - User photoUrl: ${user.photoUrl}');
+      }
     });
   }
 
@@ -125,35 +134,71 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          // Profile Picture
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.white.withValues(alpha: 0.2),
-                  Colors.white.withValues(alpha: 0.1),
-                ],
+          // Profile Picture with Edit Button
+          Stack(
+            alignment: Alignment.bottomRight,
+            children: [
+              // Profile Picture Container
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.white.withValues(alpha: 0.2),
+                      Colors.white.withValues(alpha: 0.1),
+                    ],
+                  ),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    width: 2,
+                  ),
+                ),
+                child: ClipOval(
+                  child: AvatarUtils.buildAvatarWidget(
+                    photoUrl: user.photoUrl,
+                    size: 100,
+                    placeholder: const Icon(Icons.person, size: 50, color: Colors.white),
+                  ),
+                ),
               ),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.3),
-                width: 2,
+              
+              // Edit Button
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const EditProfileScreen()),
+                  ).then((_) {
+                    // Refresh user data when returning from edit profile
+                    final authProvider = provider.Provider.of<AuthProvider>(context, listen: false);
+                    authProvider.refreshUserData();
+                  });
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.withValues(alpha: 0.8),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.edit,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                ),
               ),
-            ),
-            child: user.photoUrl != null
-                ? ClipOval(
-                    child: Image.network(
-                      user.photoUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const Icon(Icons.person, size: 50, color: Colors.white),
-                    ),
-                  )
-                : const Icon(Icons.person, size: 50, color: Colors.white),
+            ],
           ),
           
           const SizedBox(height: 16),
@@ -196,6 +241,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.white.withValues(alpha: 0.9),
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Edit Profile Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const EditProfileScreen()),
+                ).then((_) {
+                  // Refresh user data when returning from edit profile
+                  final authProvider = provider.Provider.of<AuthProvider>(context, listen: false);
+                  authProvider.refreshUserData();
+                });
+              },
+              icon: const Icon(Icons.edit_rounded),
+              label: const Text('Edit Profile'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.purple.withValues(alpha: 0.6),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
@@ -647,11 +721,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showPrivacySettings(BuildContext context) {
-    // TODO: Implement privacy settings
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Privacy settings coming soon!'),
-        backgroundColor: Colors.blue,
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const PrivacySettingsScreen(),
       ),
     );
   }

@@ -931,25 +931,20 @@ class _JournalingScreenState extends State<JournalingScreen>
         userId: _currentUserId!,
         title: _generateTitle(_journalController.text),
         content: _journalController.text.trim(),
-        mood: _selectedMood,
-        emoji: _getMoodEmoji(_selectedMood),
+        type: JournalEntryType.freeform,
         tags: List<String>.from(_selectedTags),
-        isPrivate: _isPrivate,
+        moodId: _selectedMood,
       );
 
-      if (entryId != null) {
-        _clearEntry();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('✅ Journal entry saved successfully!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          _tabController.animateTo(1);
-        }
-      } else {
-        throw 'Failed to save entry';
+      _clearEntry();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Journal entry saved successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _tabController.animateTo(1);
       }
     } catch (e) {
       if (mounted) {

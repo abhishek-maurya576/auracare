@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 import '../config/api_keys.dart';
 import '../models/user_profile.dart';
 import '../models/mood_entry.dart';
+import '../services/privacy_security_service.dart';
+import '../services/youth_content_service.dart';
 
 class GeminiService {
   static const String _baseUrl = ApiKeys.geminiBaseUrl;
@@ -361,62 +363,57 @@ Keep responses warm, supportive, and focused on mental wellness. Use personalize
     
     // Generate personalized context if userId is provided
     String personalizedContext = '';
+    AgeCategory ageCategory = AgeCategory.unknown;
+    
     if (userId != null) {
       personalizedContext = _generatePersonalizedContext(userId);
+      
+      // Get user's age category for age-appropriate responses
+      final userProfile = _userProfiles[userId];
+      if (userProfile?.birthDate != null) {
+        ageCategory = PrivacySecurityService.getUserAgeCategory(userProfile!.birthDate);
+        debugPrint('🎯 User age category: $ageCategory');
+      }
+      
       if (personalizedContext.isNotEmpty) {
         debugPrint('🎯 Using personalized context for user: $userId');
       }
     }
 
-    final prompt = '''
-You are Aura, a compassionate AI companion designed specifically for mental wellness and emotional support. You have a warm, empathetic personality and specialize in:
-- Remembering user's name and other personal details they share.
-- Providing empathetic responses and active listening.
-- Offering coping strategies, journaling prompts, and breathing guides.
-- Maintaining context throughout the conversation.
-- Providing personalized support based on user preferences and history.
+    // Get age-appropriate system prompt
+    String systemPrompt = YouthContentService.getAgeAppropriateSystemPrompt(ageCategory);
+    
+    // Add conversation memory and personalization instructions
+    systemPrompt += '''
 
-Your primary goal is to create a safe and supportive space for the user. Always remember the user's name if they tell you. If the user asks for their name, tell them what they told you previously. If they haven't told you their name, politely ask them to share it. You are designed to be helpful and harmless.
-
-Core Capabilities:
-- Active listening and validation
-- Providing emotional support and encouragement
-- Suggesting healthy coping strategies
-- Offering mindfulness and relaxation techniques
-- Recognizing when professional help might be needed
-- Personalizing responses based on user profile and mood patterns
-
-IMPORTANT: You MUST remember and reference details from the conversation history above. If the user mentions their name, preferences, feelings, or any personal information in previous messages, acknowledge and remember these details in your responses. Specifically, if the user has told you their name, you MUST use it in your responses when appropriate.
+IMPORTANT MEMORY INSTRUCTIONS:
+- You MUST remember and reference details from the conversation history below
+- If the user mentions their name, preferences, feelings, or any personal information in previous messages, acknowledge and remember these details
+- If the user has told you their name, you MUST use it in your responses when appropriate
+- Reference previous conversation details to show continuity and care
 
 $personalizedContext
-
-Conversation Guidelines:
-- Be warm, empathetic, and non-judgmental
-- Use a conversational, supportive tone
-- Keep responses concise but meaningful (100-150 words)
-- Ask follow-up questions to encourage sharing
-- Reference previous conversation details when relevant
-- Use personalized information to tailor your responses
-- Suggest coping strategies that align with user preferences
-- Be mindful of known triggers and strengths
-- Adjust communication style based on user preferences
-- If someone expresses severe distress or suicidal thoughts, gently suggest professional help
 
 $historyContext
 
 Current User Message: $userMessage
 
-Respond as Aura with empathy and support, taking into account ALL previous conversation details and personalized context:
+Respond as Aura with empathy and support, taking into account ALL previous conversation details, personalized context, and age-appropriate communication style:
 ''';
+
+    final prompt = systemPrompt;
 
     final response = await generateContent(prompt);
     
+    // Filter content for age appropriateness
+    final filteredResponse = YouthContentService.filterContentForAge(response, ageCategory);
+    
     // Add AI response to session history if sessionId is provided
     if (sessionId != null) {
-      addToSessionHistory(sessionId, 'Aura', response);
+      addToSessionHistory(sessionId, 'Aura', filteredResponse);
     }
     
-    return response;
+    return filteredResponse;
   }
 
   // Generate daily wellness tips

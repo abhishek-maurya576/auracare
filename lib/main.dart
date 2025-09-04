@@ -4,12 +4,15 @@ import 'package:provider/provider.dart' as provider;
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'screens/splash_screen.dart';
+import 'screens/auth_screen.dart';
+import 'screens/home_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/mood_provider.dart';
 import 'providers/user_profile_provider.dart';
 import 'providers/journal_provider.dart';
+import 'providers/crisis_alert_provider.dart';
 import 'utils/app_colors.dart';
-import 'services/gemini_service.dart';
 import 'providers/api_status_provider.dart';
 
 void main() async {
@@ -45,6 +48,7 @@ void main() async {
         provider.ChangeNotifierProvider(create: (_) => MoodProvider()),
         provider.ChangeNotifierProvider(create: (_) => UserProfileProvider()),
         provider.ChangeNotifierProvider(create: (_) => JournalProvider()),
+        provider.ChangeNotifierProvider(create: (_) => CrisisAlertProvider()),
       ],
       child: const AuraCareApp(),
     ),
@@ -101,7 +105,19 @@ class AuraCareApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const SplashScreen(),
+      // Define named routes
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const SplashScreen(),
+        '/auth': (context) => const AuthScreen(),
+        '/home': (context) => const HomeScreen(),
+        '/onboarding': (context) => const OnboardingScreen(),
+      },
+      // Add onGenerateRoute for handling undefined routes
+      onGenerateRoute: (settings) {
+        // If route is not found, redirect to splash screen
+        return MaterialPageRoute(builder: (context) => const SplashScreen());
+      },
     );
   }
 }

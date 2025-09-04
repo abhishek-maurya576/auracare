@@ -4,11 +4,11 @@ import '../widgets/aura_background.dart';
 import '../widgets/glass_widgets.dart';
 import '../widgets/mood_check_card.dart';
 import '../widgets/mood_graph_card.dart';
+import '../widgets/crisis_dashboard_widget.dart';
 import '../providers/auth_provider.dart';
-import 'auth_screen.dart';
 import 'simple_ai_chat_screen.dart';
 import 'meditation_screen.dart';
-import 'journaling_screen.dart';
+import 'journal_screen.dart';
 import 'insights_screen.dart';
 import 'chat_history_screen.dart';
 import 'profile_screen.dart';
@@ -56,6 +56,9 @@ class HomeScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.all(20),
               children: [
+                // Crisis Dashboard (only shows when needed)
+                const CrisisDashboardWidget(),
+                
                 // Hero card - Mood Check-In
                 const MoodCheckCard(),
                 
@@ -85,7 +88,7 @@ class HomeScreen extends StatelessWidget {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const JournalingScreen()),
+                      MaterialPageRoute(builder: (context) => const JournalScreen()),
                     );
                   },
                 ),
@@ -273,9 +276,10 @@ class HomeScreen extends StatelessWidget {
                 Navigator.pop(context);
                 await authProvider.signOut();
                 if (context.mounted) {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => const AuthScreen()),
+                  Navigator.pushNamedAndRemoveUntil(
+                    context, 
+                    '/auth', 
+                    (route) => false
                   );
                 }
               },

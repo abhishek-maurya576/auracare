@@ -6,6 +6,10 @@ class AppColors {
   static const Color backgroundMiddle = Color(0xFF0B2E3C); // Navy to teal
   static const Color backgroundEnd = Color(0xFF0E4F4F); // Teal
 
+  // Primary app colors
+  static const Color primaryColor = Color(0xFF7EE7D1); // Teal - main brand color
+  static const Color secondaryColor = Color(0xFF60A5FA); // Blue - secondary brand color
+
   // Accent colors (aura rings)
   static const Color accentYellow = Color(0xFFFFD66E);
   static const Color accentTeal = Color(0xFF7EE7D1);

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart' as provider;
 import '../widgets/aura_background.dart';
 import '../widgets/glass_widgets.dart';
 import '../providers/auth_provider.dart';
+import 'edit_profile_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -832,11 +833,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _editProfile() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Profile editing feature coming soon!'),
-        backgroundColor: Colors.blue,
-      ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const EditProfileScreen()),
     );
   }
 

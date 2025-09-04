@@ -5,6 +5,7 @@ class UserProfile {
   final String name;
   final String email;
   final int? age;
+  final DateTime? birthDate; // Birth date for age calculation and COPPA compliance
   final String? photoUrl;
   final DateTime createdAt;
   final DateTime lastLoginAt;
@@ -13,7 +14,9 @@ class UserProfile {
   final Map<String, dynamic>? preferences;
   final List<String>? interests;
   final List<String>? mentalHealthGoals;
+  final List<String>? mentalHealthChallenges; // For crisis intervention
   final List<String>? preferredCopingStrategies;
+  final List<String>? copingStrategies; // Alias for compatibility
   final String? communicationStyle; // 'supportive', 'direct', 'gentle', 'motivational'
   final List<String>? triggers; // Known stress/anxiety triggers
   final List<String>? strengths; // Personal strengths to reinforce
@@ -43,13 +46,16 @@ class UserProfile {
     required this.name,
     required this.email,
     this.age,
+    this.birthDate,
     this.photoUrl,
     required this.createdAt,
     required this.lastLoginAt,
     this.preferences,
     this.interests,
     this.mentalHealthGoals,
+    this.mentalHealthChallenges,
     this.preferredCopingStrategies,
+    this.copingStrategies,
     this.communicationStyle,
     this.triggers,
     this.strengths,

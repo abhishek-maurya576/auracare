@@ -147,20 +147,35 @@ class AuthProvider with ChangeNotifier {
       final userCredential = await _authService.createUserWithEmailPassword(email, password);
       
       if (userCredential != null && userCredential.user != null) {
-        // Update the display name
+        debugPrint('User created successfully, setting display name: $name');
+        
+        // Update the display name first
         await _authService.updateUserProfile(displayName: name);
         
-        // Create user document in Firestore
+        // Wait a moment to ensure Firebase Auth updates are processed
+        await Future.delayed(const Duration(milliseconds: 500));
+        
+        // Verify the display name was set correctly
+        final currentUser = FirebaseAuth.instance.currentUser;
+        if (currentUser != null && (currentUser.displayName == null || currentUser.displayName != name)) {
+          debugPrint('Warning: Display name not set correctly. Firebase: ${currentUser.displayName}, Expected: $name');
+          // Try updating again
+          await _authService.updateUserProfile(displayName: name);
+        }
+        
+        // Create user document in Firestore with the provided name
         final userModel = UserModel(
           id: userCredential.user!.uid,
-          name: name,
+          name: name, // Use the provided name directly
           email: email,
           age: age,
           createdAt: DateTime.now(),
           lastLoginAt: DateTime.now(),
         );
         
+        // Save to Firestore
         await _authService.saveUserData(userModel);
+        debugPrint('User data saved to Firestore with name: $name');
         
         // The auth state listener will handle the rest
         return true;
@@ -188,15 +203,19 @@ class AuthProvider with ChangeNotifier {
   Future<void> updateUserProfile({
     String? name,
     int? age,
+    String? photoUrl,
     Map<String, dynamic>? preferences,
     List<String>? interests,
   }) async {
     if (_user == null) return;
     
     try {
+      debugPrint('Updating user profile with photoUrl: $photoUrl');
+      
       final updatedUser = _user!.copyWith(
         name: name,
         age: age,
+        photoUrl: photoUrl,
         preferences: preferences,
         interests: interests,
       );
@@ -204,13 +223,19 @@ class AuthProvider with ChangeNotifier {
       // Update in Firestore
       await _authService.saveUserData(updatedUser);
       
-      // Update Firebase Auth profile if name changed
-      if (name != null) {
-        await _authService.updateUserProfile(displayName: name);
+      // Update Firebase Auth profile if name or photo changed
+      // Only update Firebase Auth photoURL if it's a network URL
+      // For asset paths, we'll just store them in Firestore
+      if (name != null || (photoUrl != null && photoUrl.startsWith('http'))) {
+        await _authService.updateUserProfile(
+          displayName: name, 
+          photoURL: photoUrl != null && photoUrl.startsWith('http') ? photoUrl : null
+        );
       }
       
       _user = updatedUser;
       await _saveUserData(updatedUser);
+      debugPrint('User profile updated successfully with photoUrl: ${updatedUser.photoUrl}');
       notifyListeners();
     } catch (e) {
       _setError('Failed to update profile: $e');
@@ -222,6 +247,22 @@ class AuthProvider with ChangeNotifier {
       await _authService.sendPasswordResetEmail(email);
     } catch (e) {
       _setError('Failed to send password reset email: $e');
+    }
+  }
+  
+  // Refresh user data from Firestore
+  Future<void> refreshUserData() async {
+    if (_user == null) return;
+    
+    try {
+      final userData = await _authService.getUserData(_user!.id);
+      if (userData != null) {
+        _user = userData;
+        await _saveUserData(userData);
+        notifyListeners();
+      }
+    } catch (e) {
+      _setError('Failed to refresh user data: $e');
     }
   }
 

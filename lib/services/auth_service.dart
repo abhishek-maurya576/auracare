@@ -245,6 +245,17 @@ class AuthService {
     try {
       final userData = await getUserData(firebaseUser.uid);
       if (userData != null) {
+        // If the user has a default name in Firestore but now has a real name in Firebase Auth,
+        // update the Firestore record
+        if (userData.name == 'User' && firebaseUser.displayName != null && firebaseUser.displayName != 'User') {
+          final updatedUser = userData.copyWith(
+            name: firebaseUser.displayName,
+            lastLoginAt: DateTime.now()
+          );
+          await saveUserData(updatedUser);
+          debugPrint('Updated user name from "User" to "${firebaseUser.displayName}"');
+          return updatedUser;
+        }
         return userData.copyWith(lastLoginAt: DateTime.now());
       }
     } catch (e) {
@@ -252,14 +263,30 @@ class AuthService {
     }
     
     // Create new user model if no existing data
-    return UserModel(
+    // Ensure we're using the most accurate name available
+    final name = firebaseUser.displayName;
+    if (name == null || name.isEmpty) {
+      debugPrint('Warning: User has no display name in Firebase Auth. Using default "User"');
+    }
+    
+    final userModel = UserModel(
       id: firebaseUser.uid,
-      name: firebaseUser.displayName ?? 'User',
+      name: (name != null && name.isNotEmpty) ? name : 'User',
       email: firebaseUser.email ?? '',
       photoUrl: firebaseUser.photoURL,
       createdAt: DateTime.now(),
       lastLoginAt: DateTime.now(),
     );
+    
+    // Save this new user model to Firestore
+    try {
+      await saveUserData(userModel);
+      debugPrint('Created and saved new user model for ${userModel.name}');
+    } catch (e) {
+      debugPrint('Error saving new user model: $e');
+    }
+    
+    return userModel;
   }
 
   // Handle Firebase Auth exceptions
@@ -311,12 +338,24 @@ class AuthService {
     try {
       final user = _auth.currentUser;
       if (user != null) {
-        await user.updateDisplayName(displayName);
+        if (displayName != null) {
+          debugPrint('Updating Firebase Auth displayName to: $displayName');
+          await user.updateDisplayName(displayName);
+        }
+        
         if (photoURL != null) {
-          await user.updatePhotoURL(photoURL);
+          // Only update Firebase Auth photoURL if it's a network URL
+          // For asset paths, we'll just store them in Firestore
+          if (photoURL.startsWith('http')) {
+            debugPrint('Updating Firebase Auth photoURL to: $photoURL');
+            await user.updatePhotoURL(photoURL);
+          } else {
+            debugPrint('Skipping Firebase Auth photoURL update for asset path: $photoURL');
+          }
         }
       }
     } catch (e) {
+      debugPrint('Error updating user profile: $e');
       throw 'Failed to update profile: $e';
     }
   }

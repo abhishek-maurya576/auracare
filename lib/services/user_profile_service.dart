@@ -270,12 +270,38 @@ class UserProfileService {
       // Load or create user profile
       UserProfile? profile = await loadUserProfile(user.uid);
       
-      profile ??= await initializeUserProfile(
+      if (profile == null) {
+        // Check if we have a name from Firebase Auth
+        String userName = 'User';
+        if (user.displayName != null && user.displayName!.isNotEmpty) {
+          userName = user.displayName!;
+          debugPrint('Using Firebase Auth display name for profile: $userName');
+        } else {
+          // Try to get name from Firestore user document as a fallback
+          try {
+            final userDoc = await _firestore.collection('users').doc(user.uid).get();
+            if (userDoc.exists && userDoc.data() != null && userDoc.data()!['name'] != null) {
+              userName = userDoc.data()!['name'];
+              debugPrint('Using Firestore user name for profile: $userName');
+            }
+          } catch (e) {
+            debugPrint('Error fetching user document: $e');
+          }
+        }
+        
+        profile = await initializeUserProfile(
           userId: user.uid,
-          name: user.displayName ?? 'User',
+          name: userName,
           email: user.email ?? '',
           photoUrl: user.photoURL,
         );
+      } else if (profile.name == 'User' && user.displayName != null && user.displayName!.isNotEmpty) {
+        // Update profile if it has default name but Firebase Auth has a real name
+        final updatedProfile = profile.copyWith(name: user.displayName);
+        await saveUserProfile(updatedProfile);
+        profile = updatedProfile;
+        debugPrint('Updated profile name from "User" to "${user.displayName}"');
+      }
 
       // Load recent mood data and update patterns
       // This would typically be called from the MoodProvider

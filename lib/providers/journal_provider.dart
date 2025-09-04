@@ -2,9 +2,8 @@ import 'package:flutter/foundation.dart';
 import '../models/journal_entry.dart';
 import '../services/journal_service.dart';
 
+/// Journal Provider for managing journal entries state
 class JournalProvider with ChangeNotifier {
-  final JournalService _journalService = JournalService();
-  
   List<JournalEntry> _entries = [];
   bool _isLoading = false;
   String? _error;
@@ -16,27 +15,24 @@ class JournalProvider with ChangeNotifier {
   String? get error => _error;
   Map<String, dynamic>? get statistics => _statistics;
 
-  // Get entries count
-  int get entriesCount => _entries.length;
-
-  // Get recent entries (last 7 days)
-  List<JournalEntry> get recentEntries {
-    final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7));
-    return _entries.where((entry) => entry.createdAt.isAfter(sevenDaysAgo)).toList();
+  // Helper methods
+  void _setLoading(bool loading) {
+    _isLoading = loading;
+    notifyListeners();
   }
 
-  // Get entries by mood
-  List<JournalEntry> getEntriesByMood(String mood) {
-    return _entries.where((entry) => entry.mood == mood).toList();
+  void _setError(String? error) {
+    _error = error;
+    notifyListeners();
   }
 
-  // Get entries by tag
-  List<JournalEntry> getEntriesByTag(String tag) {
-    return _entries.where((entry) => entry.tags.contains(tag)).toList();
+  void _clearError() {
+    _error = null;
   }
 
-  // Load journal entries for a user
-  Future<void> loadJournalEntries(String userId, {
+  /// Load journal entries for a user
+  Future<void> loadJournalEntries(
+    String userId, {
     int? limit,
     DateTime? startDate,
     DateTime? endDate,
@@ -47,9 +43,9 @@ class JournalProvider with ChangeNotifier {
     try {
       debugPrint('📖 Loading journal entries for user: $userId');
       
-      final entries = await _journalService.getUserJournalEntries(
+      final entries = await JournalService.getUserJournalEntries(
         userId,
-        limit: limit,
+        limit: limit ?? 50,
         startDate: startDate,
         endDate: endDate,
       );
@@ -68,46 +64,33 @@ class JournalProvider with ChangeNotifier {
     }
   }
 
-  // Create a new journal entry
+  /// Create a new journal entry
   Future<String?> createJournalEntry({
     required String userId,
     required String title,
     required String content,
-    required String mood,
-    required String emoji,
-    required List<String> tags,
-    bool isPrivate = true,
+    required JournalEntryType type,
+    List<String> tags = const [],
+    String? moodId,
   }) async {
     _setLoading(true);
     _clearError();
 
     try {
-      debugPrint('📝 Creating new journal entry: $title');
+      debugPrint('📝 Creating journal entry for user: $userId');
       
-      final entry = JournalEntry(
-        id: '', // Will be set by Firestore
+      final entryId = await JournalService.saveJournalEntry(
         userId: userId,
-        title: title.trim(),
-        content: content.trim(),
-        mood: mood,
-        emoji: emoji,
+        title: title,
+        content: content,
+        type: type,
         tags: tags,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        isPrivate: isPrivate,
+        moodId: moodId,
       );
-
-      final entryId = await _journalService.createJournalEntry(entry);
       
-      // Add to local list with the new ID
-      final createdEntry = entry.copyWith(id: entryId);
-      _entries.insert(0, createdEntry); // Add to beginning (most recent first)
-      
-      debugPrint('✅ Journal entry created: $entryId');
-      notifyListeners();
-      
-      // Refresh statistics
-      await _loadStatistics(userId);
+      // Reload entries to get the new one
+      await loadJournalEntries(userId);
+      debugPrint('✅ Journal entry created with ID: $entryId');
       
       return entryId;
     } catch (e) {
@@ -119,16 +102,15 @@ class JournalProvider with ChangeNotifier {
     }
   }
 
-  // Update an existing journal entry
+  /// Update an existing journal entry
   Future<bool> updateJournalEntry({
-    required String entryId,
     required String userId,
-    String? title,
-    String? content,
-    String? mood,
-    String? emoji,
-    List<String>? tags,
-    bool? isPrivate,
+    required String entryId,
+    required String title,
+    required String content,
+    required JournalEntryType type,
+    List<String> tags = const [],
+    String? moodId,
   }) async {
     _setLoading(true);
     _clearError();
@@ -136,34 +118,19 @@ class JournalProvider with ChangeNotifier {
     try {
       debugPrint('📝 Updating journal entry: $entryId');
       
-      // Find the entry in local list
-      final entryIndex = _entries.indexWhere((entry) => entry.id == entryId);
-      if (entryIndex == -1) {
-        throw 'Journal entry not found locally';
-      }
-
-      final currentEntry = _entries[entryIndex];
-      final updatedEntry = currentEntry.copyWith(
+      await JournalService.saveJournalEntry(
+        userId: userId,
         title: title,
         content: content,
-        mood: mood,
-        emoji: emoji,
+        type: type,
         tags: tags,
-        isPrivate: isPrivate,
-        updatedAt: DateTime.now(),
+        moodId: moodId,
+        existingEntryId: entryId,
       );
-
-      await _journalService.updateJournalEntry(updatedEntry);
       
-      // Update local list
-      _entries[entryIndex] = updatedEntry;
-      
+      // Reload entries to get the updated one
+      await loadJournalEntries(userId);
       debugPrint('✅ Journal entry updated: $entryId');
-      notifyListeners();
-      
-      // Refresh statistics
-      await _loadStatistics(userId);
-      
       return true;
     } catch (e) {
       _setError('Failed to update journal entry: $e');
@@ -174,26 +141,24 @@ class JournalProvider with ChangeNotifier {
     }
   }
 
-  // Delete a journal entry
-  Future<bool> deleteJournalEntry(String entryId, String userId) async {
+  /// Delete a journal entry
+  Future<bool> deleteJournalEntry(String userId, String entryId) async {
     _setLoading(true);
     _clearError();
 
     try {
       debugPrint('🗑️ Deleting journal entry: $entryId');
       
-      await _journalService.deleteJournalEntry(entryId);
+      final success = await JournalService.deleteJournalEntry(userId, entryId);
       
-      // Remove from local list
-      _entries.removeWhere((entry) => entry.id == entryId);
+      if (success) {
+        // Remove from local list
+        _entries.removeWhere((entry) => entry.id == entryId);
+        notifyListeners();
+        debugPrint('✅ Journal entry deleted: $entryId');
+      }
       
-      debugPrint('✅ Journal entry deleted: $entryId');
-      notifyListeners();
-      
-      // Refresh statistics
-      await _loadStatistics(userId);
-      
-      return true;
+      return success;
     } catch (e) {
       _setError('Failed to delete journal entry: $e');
       debugPrint('❌ Error deleting journal entry: $e');
@@ -203,124 +168,96 @@ class JournalProvider with ChangeNotifier {
     }
   }
 
-  // Search journal entries
-  Future<List<JournalEntry>> searchEntries(String userId, String query) async {
-    _clearError();
-
+  /// Search journal entries
+  Future<List<JournalEntry>> searchJournalEntries(
+    String userId,
+    String query, {
+    List<String>? tags,
+    JournalEntryType? type,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     try {
-      debugPrint('🔍 Searching journal entries: "$query"');
+      debugPrint('🔍 Searching journal entries: $query');
       
-      final results = await _journalService.searchJournalEntries(userId, query);
+      final results = await JournalService.searchJournalEntries(
+        userId,
+        query,
+        limit: 50,
+      );
       
       debugPrint('✅ Found ${results.length} matching entries');
       return results;
     } catch (e) {
-      _setError('Failed to search journal entries: $e');
       debugPrint('❌ Error searching journal entries: $e');
       return [];
     }
   }
 
-  // Load journal statistics
+  /// Load journal statistics
   Future<void> _loadStatistics(String userId) async {
     try {
-      debugPrint('📊 Loading journal statistics');
-      
-      final stats = await _journalService.getJournalStatistics(userId);
-      _statistics = stats;
-      
-      debugPrint('✅ Journal statistics loaded');
+      final stats = await JournalService.getJournalStatistics(userId);
+      _statistics = {
+        'totalEntries': stats.totalEntries,
+        'totalWords': stats.totalWords,
+        'averageWordsPerEntry': stats.averageWordsPerEntry,
+        'longestStreak': stats.longestStreak,
+        'currentStreak': stats.currentStreak,
+        'entriesThisWeek': stats.entriesThisWeek,
+        'entriesThisMonth': stats.entriesThisMonth,
+        'favoriteWritingTime': stats.favoriteWritingTime,
+        'mostUsedTags': stats.mostUsedTags,
+        'moodDistribution': stats.moodDistribution,
+      };
       notifyListeners();
     } catch (e) {
-      debugPrint('⚠️ Failed to load journal statistics: $e');
-      // Don't set error for statistics as it's not critical
+      debugPrint('❌ Error loading journal statistics: $e');
     }
   }
 
-  // Get journal entry by ID
-  JournalEntry? getEntryById(String entryId) {
-    try {
-      return _entries.firstWhere((entry) => entry.id == entryId);
-    } catch (e) {
-      return null;
-    }
+  /// Get entries by mood
+  List<JournalEntry> getEntriesByMood(String mood) {
+    return _entries.where((entry) => entry.mood == mood).toList();
   }
 
-  // Get mood distribution for charts
-  Map<String, int> getMoodDistribution() {
-    final distribution = <String, int>{};
-    for (final entry in _entries) {
-      distribution[entry.mood] = (distribution[entry.mood] ?? 0) + 1;
-    }
-    return distribution;
+  /// Get entries by tag
+  List<JournalEntry> getEntriesByTag(String tag) {
+    return _entries.where((entry) => entry.tags.contains(tag)).toList();
   }
 
-  // Get tag frequency for insights
-  Map<String, int> getTagFrequency() {
-    final frequency = <String, int>{};
-    for (final entry in _entries) {
-      for (final tag in entry.tags) {
-        frequency[tag] = (frequency[tag] ?? 0) + 1;
-      }
-    }
-    return frequency;
+  /// Get entries by type
+  List<JournalEntry> getEntriesByType(JournalEntryType type) {
+    return _entries.where((entry) => entry.type == type).toList();
   }
 
-  // Get writing streak
-  int getWritingStreak() {
-    if (_entries.isEmpty) return 0;
-
-    int streak = 0;
-    DateTime? lastDate;
-    
-    final sortedEntries = List<JournalEntry>.from(_entries)
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-    for (final entry in sortedEntries) {
-      final entryDate = DateTime(
-        entry.createdAt.year,
-        entry.createdAt.month,
-        entry.createdAt.day,
-      );
-
-      if (lastDate == null) {
-        streak = 1;
-        lastDate = entryDate;
-      } else {
-        final daysDifference = lastDate.difference(entryDate).inDays;
-        
-        if (daysDifference == 1) {
-          streak++;
-          lastDate = entryDate;
-        } else if (daysDifference > 1) {
-          break;
-        }
-      }
-    }
-
-    return streak;
+  /// Get recent entries (last 7 days)
+  List<JournalEntry> get recentEntries {
+    final weekAgo = DateTime.now().subtract(const Duration(days: 7));
+    return _entries.where((entry) => entry.createdAt.isAfter(weekAgo)).toList();
   }
 
-  // Clear all data
-  void clearData() {
+  /// Get entries for today
+  List<JournalEntry> get todayEntries {
+    final today = DateTime.now();
+    return _entries.where((entry) => 
+      entry.createdAt.year == today.year &&
+      entry.createdAt.month == today.month &&
+      entry.createdAt.day == today.day
+    ).toList();
+  }
+
+  /// Clear all data (for logout)
+  void clear() {
     _entries.clear();
     _statistics = null;
-    _clearError();
-    notifyListeners();
-  }
-
-  // Private helper methods
-  void _setLoading(bool loading) {
-    _isLoading = loading;
-    notifyListeners();
-  }
-
-  void _setError(String error) {
-    _error = error;
-    notifyListeners();
-  }
-
-  void _clearError() {
     _error = null;
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  /// Refresh entries
+  Future<void> refresh(String userId) async {
+    await loadJournalEntries(userId);
   }
 }

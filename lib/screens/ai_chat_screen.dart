@@ -6,9 +6,12 @@ import '../widgets/api_status_indicator.dart';
 import '../services/gemini_service.dart';
 import '../services/firebase_service.dart';
 import '../services/chat_session_service.dart';
+import '../services/crisis_intervention_service.dart';
 import '../providers/auth_provider.dart';
 import '../providers/api_status_provider.dart';
+import '../providers/user_profile_provider.dart';
 import '../utils/app_colors.dart';
+import 'crisis_intervention_screen.dart';
 
 class AIChatScreen extends StatefulWidget {
   const AIChatScreen({super.key});
@@ -23,6 +26,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
   final GeminiService _geminiService = GeminiService();
   final FirebaseService _firebaseService = FirebaseService();
   final ChatSessionService _chatSessionService = ChatSessionService();
+  final CrisisInterventionService _crisisService = CrisisInterventionService();
   
   final List<ChatMessage> _messages = [];
   bool _isLoading = false;
@@ -375,15 +379,80 @@ class _AIChatScreenState extends State<AIChatScreen> {
     try {
       debugPrint('Starting personalized chat response generation for: "$userMessage"');
       
-      // Check for crisis keywords
-      final isCrisis = await _geminiService.detectCrisisKeywords(userMessage);
-      debugPrint('Crisis detection result: $isCrisis');
+      // Get user profile for personalized crisis detection
+      final userProfileProvider = Provider.of<UserProfileProvider>(context, listen: false);
+      final userProfile = userProfileProvider.userProfile;
+      
+      // Comprehensive crisis analysis
+      final crisisAnalysis = await _crisisService.analyzeCrisisLevel(
+        userMessage,
+        userId: userId,
+        userProfile: userProfile,
+        conversationHistory: _messages.map((m) => m.text).toList(),
+      );
+      
+      debugPrint('🚨 Crisis analysis: Severity ${crisisAnalysis.severityLevel}/10, Type: ${crisisAnalysis.crisisType}');
+
+      // Handle crisis situations
+      if (crisisAnalysis.severityLevel >= 7) {
+        debugPrint('🚨 CRISIS DETECTED - Triggering intervention protocol');
+        
+        // Show crisis intervention screen immediately
+        if (mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => CrisisInterventionScreen(
+                analysisResult: crisisAnalysis,
+                userId: userId,
+              ),
+            ),
+          );
+        }
+        
+        // Generate crisis-aware response
+        final crisisResponse = await _crisisService.generateCrisisResponse(
+          crisisAnalysis,
+          userProfile,
+        );
+        
+        // Use the immediate crisis message as AI response
+        final aiResponse = crisisResponse.immediateMessage;
+        
+        // Add crisis indicator to the message
+        final aiChatMessage = ChatMessage(
+          text: '🚨 **Crisis Support Activated**\n\n$aiResponse\n\n*I\'ve opened immediate crisis resources for you. Please consider reaching out to a professional.*',
+          isUser: false,
+          timestamp: DateTime.now(),
+          sessionId: _sessionId!,
+        );
+        
+        if (mounted) {
+          setState(() {
+            _messages.add(aiChatMessage);
+            _isLoading = false;
+          });
+        }
+        
+        _saveMessage(aiChatMessage);
+        _scrollToBottom();
+        return;
+      }
 
       // Generate AI response using persistent session memory and personalization
       String aiResponse;
-      if (isCrisis) {
-        debugPrint('Generating personalized crisis response...');
-        aiResponse = await _generateCrisisResponse(userMessage, userId: userId);
+      if (crisisAnalysis.severityLevel >= 4) {
+        debugPrint('Generating supportive response for elevated stress...');
+        // Enhanced supportive response for moderate distress
+        aiResponse = await _geminiService.generateChatResponse(
+          userMessage,
+          sessionId: _sessionId,
+          userId: userId,
+        );
+        
+        // Add supportive message if available
+        if (crisisAnalysis.supportMessage.isNotEmpty) {
+          aiResponse = '${crisisAnalysis.supportMessage}\n\n$aiResponse';
+        }
       } else {
         debugPrint('Generating personalized chat response with persistent memory...');
         // Use Gemini service directly with personalization
@@ -440,6 +509,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
     }
   }
 
+  /*
   Future<String> _generateCrisisResponse(String message, {String? userId}) async {
     try {
       // Use personalized crisis response if user profile is available
@@ -476,6 +546,7 @@ Please consider reaching out for immediate support:
 
 You deserve help and support. Is there a trusted friend, family member, or mental health professional you could contact right now?''';
   }
+  */
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {

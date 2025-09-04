@@ -1,195 +1,282 @@
+import 'dart:convert';
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../models/journal_entry.dart';
 
+import '../services/privacy_security_service.dart';
+import '../services/gemini_service.dart';
+
+/// Journal Service for encrypted journaling with AI prompts
 class JournalService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static const String _collection = 'journal_entries';
-
-  // Create a new journal entry
-  Future<String> createJournalEntry(JournalEntry entry) async {
-    try {
-      debugPrint('Creating journal entry: ${entry.title}');
-      
-      final docRef = await _firestore.collection(_collection).add(entry.toFirestore());
-      
-      debugPrint('✅ Journal entry created with ID: ${docRef.id}');
-      return docRef.id;
-    } catch (e) {
-      debugPrint('❌ Error creating journal entry: $e');
-      throw 'Failed to save journal entry: $e';
-    }
-  }
-
-  // Update an existing journal entry
-  Future<void> updateJournalEntry(JournalEntry entry) async {
-    try {
-      debugPrint('Updating journal entry: ${entry.id}');
-      
-      final updatedEntry = entry.copyWith(updatedAt: DateTime.now());
-      
-      await _firestore
-          .collection(_collection)
-          .doc(entry.id)
-          .update(updatedEntry.toFirestore());
-      
-      debugPrint('✅ Journal entry updated: ${entry.id}');
-    } catch (e) {
-      debugPrint('❌ Error updating journal entry: $e');
-      throw 'Failed to update journal entry: $e';
-    }
-  }
-
-  // Delete a journal entry
-  Future<void> deleteJournalEntry(String entryId) async {
-    try {
-      debugPrint('Deleting journal entry: $entryId');
-      
-      await _firestore.collection(_collection).doc(entryId).delete();
-      
-      debugPrint('✅ Journal entry deleted: $entryId');
-    } catch (e) {
-      debugPrint('❌ Error deleting journal entry: $e');
-      throw 'Failed to delete journal entry: $e';
-    }
-  }
-
-  // Get all journal entries for a user
-  Future<List<JournalEntry>> getUserJournalEntries(String userId, {
-    int? limit,
-    DateTime? startDate,
-    DateTime? endDate,
+  
+  /// Save journal entry with encryption
+  static Future<String> saveJournalEntry({
+    required String userId,
+    required String title,
+    required String content,
+    required JournalEntryType type,
+    List<String> tags = const [],
+    String? moodId,
+    String? existingEntryId,
   }) async {
     try {
-      debugPrint('Loading journal entries for user: $userId');
+      // Get or generate encryption key for user
+      final encryptionKey = await PrivacySecurityService.getUserEncryptionKey(userId);
       
+      // Encrypt content
+      final encryptedContent = PrivacySecurityService.encryptData(content, encryptionKey);
+      final encryptedTitle = PrivacySecurityService.encryptData(title, encryptionKey);
+      
+      // Calculate word count
+      final wordCount = content.split(RegExp(r'\s+')).where((word) => word.isNotEmpty).length;
+      
+      final now = DateTime.now();
+      
+      final entry = JournalEntry(
+        id: existingEntryId ?? '',
+        userId: userId,
+        title: encryptedTitle,
+        content: encryptedContent,
+        createdAt: existingEntryId != null ? 
+          (await getJournalEntry(userId, existingEntryId))?.createdAt ?? now : now,
+        updatedAt: now,
+        tags: tags,
+        moodId: moodId,
+        wordCount: wordCount,
+        isEncrypted: true,
+        encryptionKeyId: 'user_$userId',
+        type: type,
+        metadata: {
+          'version': '1.0',
+          'platform': 'flutter',
+          'encrypted_at': now.toIso8601String(),
+        },
+      );
+
+      DocumentReference docRef;
+      if (existingEntryId != null) {
+        // Update existing entry
+        docRef = _firestore.collection(_collection).doc(existingEntryId);
+        await docRef.update(entry.toFirestore());
+      } else {
+        // Create new entry
+        docRef = await _firestore.collection(_collection).add(entry.toFirestore());
+      }
+
+      debugPrint('✅ Journal entry saved: ${docRef.id}');
+      return docRef.id;
+    } catch (e) {
+      debugPrint('❌ Error saving journal entry: $e');
+      throw Exception('Failed to save journal entry: $e');
+    }
+  }
+
+  /// Get journal entry by ID with decryption
+  static Future<JournalEntry?> getJournalEntry(String userId, String entryId) async {
+    try {
+      final doc = await _firestore.collection(_collection).doc(entryId).get();
+      
+      if (!doc.exists) return null;
+      
+      final entry = JournalEntry.fromFirestore(doc);
+      
+      // Verify user ownership
+      if (entry.userId != userId) {
+        throw Exception('Unauthorized access to journal entry');
+      }
+      
+      // Decrypt content if encrypted
+      if (entry.isEncrypted) {
+        final encryptionKey = await PrivacySecurityService.getUserEncryptionKey(userId);
+        final decryptedTitle = PrivacySecurityService.decryptData(entry.title, encryptionKey);
+        final decryptedContent = PrivacySecurityService.decryptData(entry.content, encryptionKey);
+        
+        return entry.copyWith(
+          title: decryptedTitle,
+          content: decryptedContent,
+        );
+      }
+      
+      return entry;
+    } catch (e) {
+      debugPrint('❌ Error getting journal entry: $e');
+      return null;
+    }
+  }
+
+  /// Get all journal entries for user
+  static Future<List<JournalEntry>> getUserJournalEntries(
+    String userId, {
+    int limit = 50,
+    DateTime? startDate,
+    DateTime? endDate,
+    JournalEntryType? type,
+    List<String>? tags,
+  }) async {
+    try {
       Query query = _firestore
           .collection(_collection)
           .where('userId', isEqualTo: userId)
           .orderBy('createdAt', descending: true);
 
-      // Apply date filters if provided
+      if (limit > 0) {
+        query = query.limit(limit);
+      }
+
       if (startDate != null) {
         query = query.where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate));
       }
+
       if (endDate != null) {
         query = query.where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(endDate));
       }
 
-      // Apply limit if provided
-      if (limit != null) {
-        query = query.limit(limit);
+      if (type != null) {
+        query = query.where('type', isEqualTo: type.toString());
       }
 
       final querySnapshot = await query.get();
-      
-      final entries = querySnapshot.docs
-          .map((doc) => JournalEntry.fromFirestore(doc))
-          .toList();
-      
-      debugPrint('✅ Loaded ${entries.length} journal entries');
-      return entries;
-    } catch (e) {
-      debugPrint('❌ Error loading journal entries: $e');
-      throw 'Failed to load journal entries: $e';
-    }
-  }
+      final entries = <JournalEntry>[];
 
-  // Get a specific journal entry
-  Future<JournalEntry?> getJournalEntry(String entryId) async {
-    try {
-      debugPrint('Loading journal entry: $entryId');
-      
-      final doc = await _firestore.collection(_collection).doc(entryId).get();
-      
-      if (doc.exists) {
+      for (final doc in querySnapshot.docs) {
         final entry = JournalEntry.fromFirestore(doc);
-        debugPrint('✅ Journal entry loaded: ${entry.title}');
-        return entry;
-      } else {
-        debugPrint('⚠️ Journal entry not found: $entryId');
-        return null;
+        
+        // Decrypt content if encrypted
+        if (entry.isEncrypted) {
+          try {
+            final encryptionKey = await PrivacySecurityService.getUserEncryptionKey(userId);
+            final decryptedTitle = PrivacySecurityService.decryptData(entry.title, encryptionKey);
+            final decryptedContent = PrivacySecurityService.decryptData(entry.content, encryptionKey);
+            
+            final decryptedEntry = entry.copyWith(
+              title: decryptedTitle,
+              content: decryptedContent,
+            );
+            
+            // Filter by tags if specified
+            if (tags == null || tags.isEmpty || 
+                tags.any((tag) => decryptedEntry.tags.contains(tag))) {
+              entries.add(decryptedEntry);
+            }
+          } catch (e) {
+            debugPrint('⚠️ Failed to decrypt journal entry ${entry.id}: $e');
+            // Skip entries that can't be decrypted
+          }
+        } else {
+          // Filter by tags if specified
+          if (tags == null || tags.isEmpty || 
+              tags.any((tag) => entry.tags.contains(tag))) {
+            entries.add(entry);
+          }
+        }
       }
-    } catch (e) {
-      debugPrint('❌ Error loading journal entry: $e');
-      throw 'Failed to load journal entry: $e';
-    }
-  }
 
-  // Get journal entries by mood
-  Future<List<JournalEntry>> getJournalEntriesByMood(String userId, String mood) async {
-    try {
-      debugPrint('Loading journal entries for mood: $mood');
-      
-      final querySnapshot = await _firestore
-          .collection(_collection)
-          .where('userId', isEqualTo: userId)
-          .where('mood', isEqualTo: mood)
-          .orderBy('createdAt', descending: true)
-          .get();
-      
-      final entries = querySnapshot.docs
-          .map((doc) => JournalEntry.fromFirestore(doc))
-          .toList();
-      
-      debugPrint('✅ Loaded ${entries.length} entries for mood: $mood');
+      debugPrint('✅ Retrieved ${entries.length} journal entries for user $userId');
       return entries;
     } catch (e) {
-      debugPrint('❌ Error loading entries by mood: $e');
-      throw 'Failed to load entries by mood: $e';
+      debugPrint('❌ Error getting journal entries: $e');
+      return [];
     }
   }
 
-  // Get journal entries by tags
-  Future<List<JournalEntry>> getJournalEntriesByTag(String userId, String tag) async {
+  /// Delete journal entry
+  static Future<bool> deleteJournalEntry(String userId, String entryId) async {
     try {
-      debugPrint('Loading journal entries for tag: $tag');
-      
-      final querySnapshot = await _firestore
-          .collection(_collection)
-          .where('userId', isEqualTo: userId)
-          .where('tags', arrayContains: tag)
-          .orderBy('createdAt', descending: true)
-          .get();
-      
-      final entries = querySnapshot.docs
-          .map((doc) => JournalEntry.fromFirestore(doc))
-          .toList();
-      
-      debugPrint('✅ Loaded ${entries.length} entries for tag: $tag');
-      return entries;
+      // Verify ownership first
+      final entry = await getJournalEntry(userId, entryId);
+      if (entry == null || entry.userId != userId) {
+        throw Exception('Unauthorized deletion attempt');
+      }
+
+      await _firestore.collection(_collection).doc(entryId).delete();
+      debugPrint('✅ Journal entry deleted: $entryId');
+      return true;
     } catch (e) {
-      debugPrint('❌ Error loading entries by tag: $e');
-      throw 'Failed to load entries by tag: $e';
+      debugPrint('❌ Error deleting journal entry: $e');
+      return false;
     }
   }
 
-  // Get journal statistics for a user
-  Future<Map<String, dynamic>> getJournalStatistics(String userId) async {
+  /// Generate AI writing prompt based on user profile and mood
+  static Future<String> generateWritingPrompt({
+    required String userId,
+    JournalEntryType type = JournalEntryType.freeform,
+    String? currentMood,
+    String? recentContext,
+  }) async {
     try {
-      debugPrint('Loading journal statistics for user: $userId');
+      // Get user's age category for appropriate prompts
+      final ageCategory = await _getUserAgeCategory(userId);
       
-      final querySnapshot = await _firestore
-          .collection(_collection)
-          .where('userId', isEqualTo: userId)
-          .get();
+      String promptContext = '''
+Generate a thoughtful, supportive writing prompt for a journal entry. 
+
+User Context:
+- Age group: ${ageCategory.toString().split('.').last}
+- Journal type: ${type.displayName}
+- Current mood: ${currentMood ?? 'not specified'}
+- Recent context: ${recentContext ?? 'none provided'}
+
+Requirements:
+- Make it ${_getAgeAppropriateLanguage(ageCategory)}
+- Focus on ${type.description}
+- Be encouraging and non-judgmental
+- Provide a specific, actionable prompt
+- Keep it concise (1-2 sentences)
+- Make it personally meaningful
+
+Generate ONE writing prompt that would help this person explore their thoughts and feelings in a healthy way:
+''';
+
+      final geminiService = GeminiService();
+      final prompt = await geminiService.generateContent(promptContext);
       
-      final entries = querySnapshot.docs
-          .map((doc) => JournalEntry.fromFirestore(doc))
-          .toList();
+      debugPrint('✅ Generated writing prompt for user $userId');
+      return prompt.trim();
+    } catch (e) {
+      debugPrint('❌ Error generating writing prompt: $e');
+      // Return fallback prompts
+      return _getFallbackPrompt(type);
+    }
+  }
+
+  /// Get journal statistics for user
+  static Future<JournalStatistics> getJournalStatistics(String userId) async {
+    try {
+      final entries = await getUserJournalEntries(userId, limit: 0); // Get all entries
       
-      // Calculate statistics
-      final totalEntries = entries.length;
+      final now = DateTime.now();
+      final thisWeek = now.subtract(Duration(days: now.weekday - 1));
+      final thisMonth = DateTime(now.year, now.month, 1);
+      
+      final weeklyEntries = entries.where((e) => e.createdAt.isAfter(thisWeek)).length;
+      final monthlyEntries = entries.where((e) => e.createdAt.isAfter(thisMonth)).length;
+      
       final totalWords = entries.fold<int>(0, (total, entry) => total + entry.wordCount);
-      final averageWordsPerEntry = totalEntries > 0 ? (totalWords / totalEntries).round() : 0;
+      final averageWordsPerEntry = entries.isEmpty ? 0 : (totalWords / entries.length).round();
       
-      // Mood distribution
-      final moodCounts = <String, int>{};
-      for (final entry in entries) {
-        moodCounts[entry.mood] = (moodCounts[entry.mood] ?? 0) + 1;
+      // Calculate streak
+      int currentStreak = 0;
+      DateTime checkDate = DateTime(now.year, now.month, now.day);
+      
+      for (int i = 0; i < 365; i++) { // Check up to a year
+        final hasEntryOnDate = entries.any((entry) {
+          final entryDate = DateTime(entry.createdAt.year, entry.createdAt.month, entry.createdAt.day);
+          return entryDate.isAtSameMomentAs(checkDate);
+        });
+        
+        if (hasEntryOnDate) {
+          currentStreak++;
+          checkDate = checkDate.subtract(const Duration(days: 1));
+        } else {
+          break;
+        }
       }
       
-      // Tag frequency
+      // Get most used tags
       final tagCounts = <String, int>{};
       for (final entry in entries) {
         for (final tag in entry.tags) {
@@ -197,110 +284,214 @@ class JournalService {
         }
       }
       
-      // Recent activity (last 30 days)
-      final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
-      final recentEntries = entries.where((entry) => entry.createdAt.isAfter(thirtyDaysAgo)).length;
+      final mostUsedTags = tagCounts.entries
+          .toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
       
-      // Longest streak
-      int currentStreak = 0;
-      int longestStreak = 0;
-      DateTime? lastEntryDate;
+      return JournalStatistics(
+        totalEntries: entries.length,
+        weeklyEntries: weeklyEntries,
+        monthlyEntries: monthlyEntries,
+        totalWords: totalWords,
+        averageWordsPerEntry: averageWordsPerEntry,
+        currentStreak: currentStreak,
+        longestStreak: currentStreak, // For now, same as current streak
+        mostUsedTags: mostUsedTags.take(5).map((e) => e.key).toList(),
+        longestEntry: entries.isEmpty ? 0 : entries.map((e) => e.wordCount).reduce(max),
+        firstEntryDate: entries.isEmpty ? null : entries.last.createdAt,
+        entriesThisWeek: weeklyEntries,
+        entriesThisMonth: monthlyEntries,
+        favoriteWritingTime: 'Evening', // Default for now
+        moodDistribution: {}, // Empty for now
+      );
+    } catch (e) {
+      debugPrint('❌ Error getting journal statistics: $e');
+      return JournalStatistics.empty();
+    }
+  }
+
+  /// Search journal entries
+  static Future<List<JournalEntry>> searchJournalEntries(
+    String userId,
+    String searchQuery, {
+    int limit = 20,
+  }) async {
+    try {
+      // Get all entries (we'll filter locally since Firestore doesn't support full-text search)
+      final allEntries = await getUserJournalEntries(userId, limit: 0);
       
-      final sortedEntries = entries..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      final searchTerms = searchQuery.toLowerCase().split(' ');
+      final matchingEntries = <JournalEntry>[];
       
-      for (final entry in sortedEntries) {
-        final entryDate = DateTime(entry.createdAt.year, entry.createdAt.month, entry.createdAt.day);
+      for (final entry in allEntries) {
+        final searchableText = '${entry.title} ${entry.content} ${entry.tags.join(' ')}'.toLowerCase();
         
-        if (lastEntryDate == null) {
-          currentStreak = 1;
-          lastEntryDate = entryDate;
-        } else {
-          final daysDifference = lastEntryDate.difference(entryDate).inDays;
-          
-          if (daysDifference == 1) {
-            currentStreak++;
-          } else if (daysDifference > 1) {
-            longestStreak = longestStreak > currentStreak ? longestStreak : currentStreak;
-            currentStreak = 1;
-          }
-          
-          lastEntryDate = entryDate;
+        final matchesAll = searchTerms.every((term) => searchableText.contains(term));
+        if (matchesAll) {
+          matchingEntries.add(entry);
         }
       }
       
-      longestStreak = longestStreak > currentStreak ? longestStreak : currentStreak;
+      // Sort by relevance (entries with more matches first)
+      matchingEntries.sort((a, b) {
+        final aText = '${a.title} ${a.content}'.toLowerCase();
+        final bText = '${b.title} ${b.content}'.toLowerCase();
+        
+        final aMatches = searchTerms.fold<int>(0, (accumulator, term) {
+          return accumulator + RegExp(term).allMatches(aText).length;
+        });
+        
+        final bMatches = searchTerms.fold<int>(0, (accumulator, term) {
+          return accumulator + RegExp(term).allMatches(bText).length;
+        });
+        
+        return bMatches.compareTo(aMatches);
+      });
       
-      final statistics = {
-        'totalEntries': totalEntries,
-        'totalWords': totalWords,
-        'averageWordsPerEntry': averageWordsPerEntry,
-        'recentEntries': recentEntries,
-        'currentStreak': currentStreak,
-        'longestStreak': longestStreak,
-        'moodDistribution': moodCounts,
-        'topTags': tagCounts,
-        'firstEntryDate': entries.isNotEmpty ? entries.last.createdAt.toIso8601String() : null,
-        'lastEntryDate': entries.isNotEmpty ? entries.first.createdAt.toIso8601String() : null,
-      };
-      
-      debugPrint('✅ Journal statistics calculated: $totalEntries entries, $totalWords words');
-      return statistics;
-    } catch (e) {
-      debugPrint('❌ Error calculating journal statistics: $e');
-      throw 'Failed to calculate journal statistics: $e';
-    }
-  }
-
-  // Search journal entries
-  Future<List<JournalEntry>> searchJournalEntries(String userId, String searchQuery) async {
-    try {
-      debugPrint('Searching journal entries for: "$searchQuery"');
-      
-      // Note: Firestore doesn't support full-text search natively
-      // This is a basic implementation that searches in title and content
-      // For production, consider using Algolia or similar service
-      
-      final querySnapshot = await _firestore
-          .collection(_collection)
-          .where('userId', isEqualTo: userId)
-          .orderBy('createdAt', descending: true)
-          .get();
-      
-      final allEntries = querySnapshot.docs
-          .map((doc) => JournalEntry.fromFirestore(doc))
-          .toList();
-      
-      // Filter entries that contain the search query
-      final searchResults = allEntries.where((entry) {
-        final query = searchQuery.toLowerCase();
-        return entry.title.toLowerCase().contains(query) ||
-               entry.content.toLowerCase().contains(query) ||
-               entry.tags.any((tag) => tag.toLowerCase().contains(query));
-      }).toList();
-      
-      debugPrint('✅ Found ${searchResults.length} entries matching "$searchQuery"');
-      return searchResults;
+      return matchingEntries.take(limit).toList();
     } catch (e) {
       debugPrint('❌ Error searching journal entries: $e');
-      throw 'Failed to search journal entries: $e';
+      return [];
     }
   }
 
-  // Stream journal entries for real-time updates
-  Stream<List<JournalEntry>> streamUserJournalEntries(String userId, {int? limit}) {
-    Query query = _firestore
-        .collection(_collection)
-        .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true);
-
-    if (limit != null) {
-      query = query.limit(limit);
+  /// Export journal entries to JSON
+  static Future<String> exportJournalEntries(String userId) async {
+    try {
+      final entries = await getUserJournalEntries(userId, limit: 0);
+      
+      final exportData = {
+        'export_date': DateTime.now().toIso8601String(),
+        'user_id': userId,
+        'total_entries': entries.length,
+        'entries': entries.map((entry) => {
+          'id': entry.id,
+          'title': entry.title,
+          'content': entry.content,
+          'created_at': entry.createdAt.toIso8601String(),
+          'updated_at': entry.updatedAt.toIso8601String(),
+          'tags': entry.tags,
+          'type': entry.type.displayName,
+          'word_count': entry.wordCount,
+        }).toList(),
+      };
+      
+      return jsonEncode(exportData);
+    } catch (e) {
+      debugPrint('❌ Error exporting journal entries: $e');
+      throw Exception('Failed to export journal entries: $e');
     }
+  }
 
-    return query.snapshots().map((snapshot) {
-      return snapshot.docs
-          .map((doc) => JournalEntry.fromFirestore(doc))
-          .toList();
-    });
+  // Helper methods
+  static Future<AgeCategory> _getUserAgeCategory(String userId) async {
+    // This would typically get the user's profile from a provider or service
+    // For now, return a default
+    return AgeCategory.youngAdult;
+  }
+
+  static String _getAgeAppropriateLanguage(AgeCategory ageCategory) {
+    switch (ageCategory) {
+      case AgeCategory.youngTeen:
+        return 'simple, encouraging, and relatable to teen experiences';
+      case AgeCategory.teen:
+        return 'supportive, honest, and relevant to teenage challenges';
+      case AgeCategory.youngAdult:
+        return 'thoughtful, empowering, and focused on growth';
+      case AgeCategory.adult:
+        return 'mature, insightful, and comprehensive';
+      default:
+        return 'warm, supportive, and encouraging';
+    }
+  }
+
+  static String _getFallbackPrompt(JournalEntryType type) {
+    switch (type) {
+      case JournalEntryType.gratitude:
+        return 'What are three things you\'re grateful for today, and why do they matter to you?';
+      case JournalEntryType.reflection:
+        return 'How are you feeling right now, and what experiences today contributed to these feelings?';
+      case JournalEntryType.goals:
+        return 'What\'s one small step you can take tomorrow toward something that matters to you?';
+      case JournalEntryType.dreams:
+        return 'Describe a recent dream or a dream you have for your future.';
+      case JournalEntryType.therapy:
+        return 'What thoughts or feelings would be helpful to explore right now?';
+      case JournalEntryType.crisis:
+        return 'You\'re in a safe space here. What would help you feel a little better right now?';
+      default:
+        return 'What\'s on your mind today? Write about anything that feels important to you.';
+    }
+  }
+}
+
+/// Journal statistics model
+class JournalStatistics {
+  final int totalEntries;
+  final int weeklyEntries;
+  final int monthlyEntries;
+  final int totalWords;
+  final int averageWordsPerEntry;
+  final int currentStreak;
+  final int longestStreak; // For compatibility
+  final List<String> mostUsedTags;
+  final int longestEntry;
+  final DateTime? firstEntryDate;
+  final int entriesThisWeek; // Alias for weeklyEntries
+  final int entriesThisMonth; // Alias for monthlyEntries
+  final String? favoriteWritingTime;
+  final Map<String, int>? moodDistribution;
+
+  JournalStatistics({
+    required this.totalEntries,
+    required this.weeklyEntries,
+    required this.monthlyEntries,
+    required this.totalWords,
+    required this.averageWordsPerEntry,
+    required this.currentStreak,
+    required this.longestStreak,
+    required this.mostUsedTags,
+    required this.longestEntry,
+    this.firstEntryDate,
+    required this.entriesThisWeek,
+    required this.entriesThisMonth,
+    this.favoriteWritingTime,
+    this.moodDistribution,
+  });
+
+  factory JournalStatistics.empty() {
+    return JournalStatistics(
+      totalEntries: 0,
+      weeklyEntries: 0,
+      monthlyEntries: 0,
+      totalWords: 0,
+      averageWordsPerEntry: 0,
+      currentStreak: 0,
+      longestStreak: 0,
+      mostUsedTags: [],
+      longestEntry: 0,
+      firstEntryDate: null,
+      entriesThisWeek: 0,
+      entriesThisMonth: 0,
+      favoriteWritingTime: null,
+      moodDistribution: null,
+    );
+  }
+
+  /// Get formatted streak text
+  String get streakText {
+    if (currentStreak == 0) return 'Start your streak today!';
+    if (currentStreak == 1) return '1 day streak 🔥';
+    return '$currentStreak day streak 🔥';
+  }
+
+  /// Get writing consistency level
+  String get consistencyLevel {
+    if (totalEntries == 0) return 'Getting Started';
+    if (currentStreak >= 30) return 'Dedicated Writer';
+    if (currentStreak >= 14) return 'Consistent Writer';
+    if (currentStreak >= 7) return 'Regular Writer';
+    if (weeklyEntries >= 3) return 'Active Writer';
+    return 'Occasional Writer';
   }
 }

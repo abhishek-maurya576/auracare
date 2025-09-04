@@ -4,7 +4,6 @@ import '../widgets/aura_background.dart';
 import '../widgets/glass_widgets.dart';
 import '../providers/auth_provider.dart';
 import '../utils/app_colors.dart';
-import 'home_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -767,9 +766,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     await authProvider.updateUserProfile(preferences: _quizData);
 
     if (mounted) {
-      Navigator.pushReplacement(
+      Navigator.pushNamedAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        '/home',
+        (route) => false,
       );
     }
   }

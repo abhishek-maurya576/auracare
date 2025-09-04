@@ -167,29 +167,175 @@ class ChatSessionService {
     return {};
   }
 
-  // Get all user sessions
-  Future<List<Map<String, dynamic>>> getUserSessions({int limit = 10}) async {
+  // Get all user sessions with enhanced filtering
+  Future<List<Map<String, dynamic>>> getUserSessions({
+    int limit = 10,
+    String? searchQuery,
+    List<String>? topics,
+    String? mood,
+  }) async {
     final userId = currentUserId;
     if (userId == null) return [];
+
+    try {
+      Query query = _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('chat_sessions')
+          .orderBy('lastUpdated', descending: true);
+
+      // Apply filters
+      if (mood != null) {
+        query = query.where('mood', isEqualTo: mood);
+      }
+
+      final snapshot = await query.limit(limit).get();
+
+      var sessions = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['sessionId'] = doc.id;
+        return data;
+      }).toList();
+
+      // Apply client-side filters for complex queries
+      if (searchQuery != null && searchQuery.isNotEmpty) {
+        sessions = sessions.where((session) {
+          final title = (session['title'] ?? '').toString().toLowerCase();
+          final sessionTopics = (session['topics'] as List<dynamic>? ?? [])
+              .map((t) => t.toString().toLowerCase())
+              .join(' ');
+          return title.contains(searchQuery.toLowerCase()) ||
+                 sessionTopics.contains(searchQuery.toLowerCase());
+        }).toList();
+      }
+
+      if (topics != null && topics.isNotEmpty) {
+        sessions = sessions.where((session) {
+          final sessionTopics = (session['topics'] as List<dynamic>? ?? [])
+              .map((t) => t.toString().toLowerCase())
+              .toList();
+          return topics.any((topic) => sessionTopics.contains(topic.toLowerCase()));
+        }).toList();
+      }
+
+      debugPrint('Fetched ${sessions.length} sessions for user $userId');
+      return sessions;
+    } catch (e) {
+      debugPrint('Error getting user sessions: $e');
+      return [];
+    }
+  }
+
+  // Get session analytics
+  Future<Map<String, dynamic>> getSessionAnalytics() async {
+    final userId = currentUserId;
+    if (userId == null) return {};
 
     try {
       final snapshot = await _firestore
           .collection('users')
           .doc(userId)
           .collection('chat_sessions')
-          .orderBy('lastUpdated', descending: true)
-          .limit(limit)
           .get();
 
-      debugPrint('Fetched ${snapshot.docs.length} sessions for user $userId');
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        data['sessionId'] = doc.id;
-        return data;
-      }).toList();
+      final sessions = snapshot.docs.map((doc) => doc.data()).toList();
+      
+      // Calculate analytics
+      final totalSessions = sessions.length;
+      final totalMessages = sessions.fold<int>(0, (sum, session) => 
+          sum + (session['messageCount'] as int? ?? 0));
+      
+      // Most discussed topics
+      final topicCounts = <String, int>{};
+      for (final session in sessions) {
+        final topics = session['topics'] as List<dynamic>? ?? [];
+        for (final topic in topics) {
+          topicCounts[topic.toString()] = (topicCounts[topic.toString()] ?? 0) + 1;
+        }
+      }
+      
+      final sortedTopics = topicCounts.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      
+      // Mood distribution
+      final moodCounts = <String, int>{};
+      for (final session in sessions) {
+        final mood = session['mood']?.toString();
+        if (mood != null) {
+          moodCounts[mood] = (moodCounts[mood] ?? 0) + 1;
+        }
+      }
+
+      return {
+        'totalSessions': totalSessions,
+        'totalMessages': totalMessages,
+        'averageMessagesPerSession': totalSessions > 0 ? totalMessages / totalSessions : 0,
+        'topTopics': sortedTopics.take(5).map((e) => {
+          'topic': e.key,
+          'count': e.value,
+        }).toList(),
+        'moodDistribution': moodCounts,
+        'lastSessionDate': sessions.isNotEmpty 
+            ? sessions.first['lastUpdated']
+            : null,
+      };
     } catch (e) {
-      debugPrint('Error getting user sessions: $e');
-      return [];
+      debugPrint('Error getting session analytics: $e');
+      return {};
     }
+  }
+
+  // Archive old sessions (older than specified days)
+  Future<void> archiveOldSessions({int olderThanDays = 30}) async {
+    final userId = currentUserId;
+    if (userId == null) return;
+
+    try {
+      final cutoffDate = DateTime.now().subtract(Duration(days: olderThanDays));
+      final snapshot = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('chat_sessions')
+          .where('lastUpdated', isLessThan: cutoffDate)
+          .get();
+
+      final batch = _firestore.batch();
+      for (final doc in snapshot.docs) {
+        batch.update(doc.reference, {'isActive': false, 'archived': true});
+      }
+
+      await batch.commit();
+      debugPrint('Archived ${snapshot.docs.length} old sessions');
+    } catch (e) {
+      debugPrint('Error archiving old sessions: $e');
+    }
+  }
+
+  // Export session data
+  Future<Map<String, dynamic>> exportSessionData(String sessionId) async {
+    final userId = currentUserId;
+    if (userId == null) return {};
+
+    try {
+      final doc = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('chat_sessions')
+          .doc(sessionId)
+          .get();
+
+      if (doc.exists) {
+        final data = doc.data()!;
+        return {
+          'sessionId': sessionId,
+          'exportDate': DateTime.now().toIso8601String(),
+          'sessionData': data,
+        };
+      }
+    } catch (e) {
+      debugPrint('Error exporting session data: $e');
+    }
+
+    return {};
   }
 }

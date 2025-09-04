@@ -4,8 +4,6 @@ import '../widgets/aura_background.dart';
 import '../widgets/glass_widgets.dart';
 import '../providers/auth_provider.dart';
 import '../utils/app_colors.dart';
-import '../screens/onboarding_screen.dart';
-import 'home_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -409,15 +407,17 @@ class _AuthScreenState extends State<AuthScreen> {
     if (success && mounted) {
       if (_isSignUp) {
         // Navigate to onboarding for new users
-        Navigator.pushReplacement(
+        Navigator.pushNamedAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+          '/onboarding',
+          (route) => false,
         );
       } else {
         // Navigate to home for existing users
-        Navigator.pushReplacement(
+        Navigator.pushNamedAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          '/home',
+          (route) => false,
         );
       }
     } else if (authProvider.errorMessage != null) {
@@ -431,9 +431,10 @@ class _AuthScreenState extends State<AuthScreen> {
 
     if (success && mounted) {
       // For Google Sign-In, always go to onboarding to collect additional info
-      Navigator.pushReplacement(
+      Navigator.pushNamedAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+        '/onboarding',
+        (route) => false,
       );
     } else if (authProvider.errorMessage != null) {
       _showErrorSnackBar(authProvider.errorMessage!);

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'glass_widgets.dart';
-import 'api_status_indicator.dart';
 import '../utils/app_colors.dart';
 import '../services/gemini_service.dart';
 import '../providers/mood_provider.dart';
