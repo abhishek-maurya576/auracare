@@ -10,6 +10,8 @@ import '../services/crisis_intervention_service.dart';
 import '../providers/auth_provider.dart';
 import '../providers/api_status_provider.dart';
 import '../providers/user_profile_provider.dart';
+import '../models/user_profile.dart';
+import '../models/chat_message.dart';
 import '../utils/app_colors.dart';
 import 'crisis_intervention_screen.dart';
 
@@ -66,8 +68,19 @@ class _AIChatScreenState extends State<AIChatScreen> {
 
   void _addWelcomeMessage() {
     if (_messages.isEmpty) {
+      final userProfileProvider = Provider.of<UserProfileProvider>(context, listen: false);
+      final userProfile = userProfileProvider.userProfile;
+      
+      String welcomeText;
+      if (userProfile?.name != null) {
+        final firstName = _getFirstName(userProfile!.name);
+        welcomeText = "Hello $firstName! 💙 I'm Aura, your AI companion for mental wellness. I can see you're here and ready to connect - that's a wonderful first step!\n\nI'm here to listen, support, and help you navigate your emotions with care and understanding. Your wellbeing matters, and I'm honored to be part of your journey.\n\nHow are you feeling today? I'm ready to support you with personalized guidance.\n\n✨ Created with care by Junior dev, Abhishek Maurya";
+      } else {
+        welcomeText = "Hello there! 💙 I'm Aura, your AI companion for mental wellness. I'm here to listen, support, and help you navigate your emotions with care and understanding.\n\nHow are you feeling today? I'm ready to support you on your journey to wellbeing.\n\n✨ Created with care by Junior dev, Abhishek Maurya";
+      }
+      
       final welcomeMessage = ChatMessage(
-        text: "Hello! I'm Aura, your AI companion for mental wellness. I'm here to listen, support, and help you navigate your emotions. How are you feeling today?\n Created by Juniour dev, Abhishek Maurya",
+        text: welcomeText,
         isUser: false,
         timestamp: DateTime.now(),
         sessionId: _sessionId!,
@@ -122,32 +135,153 @@ class _AIChatScreenState extends State<AIChatScreen> {
           onPressed: () => Navigator.pop(context),
           icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
         ),
-        title: const GlassWidget(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.psychology_rounded, color: AppColors.accentTeal, size: 20),
-                SizedBox(width: 8),
-                Text(
-                  'Talk to Aura',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                    fontSize: 18,
-                  ),
+        title: Consumer<UserProfileProvider>(
+          builder: (context, userProfileProvider, child) {
+            final userProfile = userProfileProvider.userProfile;
+            return GlassWidget(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Aura's avatar
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: AppColors.auraGradient1,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.accentTeal.withValues(alpha: 0.3),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.psychology_rounded,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          userProfile?.name != null 
+                              ? 'Talk to Aura'
+                              : 'Talk to Aura',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          userProfile?.name != null 
+                              ? 'Hi ${_getFirstName(userProfile!.name)}! 💙'
+                              : 'Your AI companion',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 8),
+                    // User's profile picture preview in app bar - Enhanced visibility
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.accentTeal.withValues(alpha: 0.4),
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.accentTeal.withValues(alpha: 0.2),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: CircleAvatar(
+                        radius: 14,
+                        backgroundColor: AppColors.accentTeal.withValues(alpha: 0.1),
+                        backgroundImage: userProfile?.photoUrl != null 
+                            ? NetworkImage(userProfile!.photoUrl!)
+                            : null,
+                        child: userProfile?.photoUrl == null
+                            ? Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      AppColors.accentTeal.withValues(alpha: 0.8),
+                                      AppColors.accentTeal.withValues(alpha: 0.6),
+                                    ],
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.person_rounded,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : null,
+                        onBackgroundImageError: (exception, stackTrace) {
+                          debugPrint('App bar profile image failed to load: $exception');
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            onPressed: _showClearHistoryDialog,
-            icon: const Icon(Icons.refresh_rounded, color: AppColors.textPrimary),
-            tooltip: 'New Conversation',
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'clear') {
+                _showClearHistoryDialog();
+              } else if (value == 'profile') {
+                // Navigate to profile settings
+                // _navigateToProfile();
+              }
+            },
+            icon: const Icon(Icons.more_vert_rounded, color: AppColors.textPrimary),
+            itemBuilder: (BuildContext context) => [
+              const PopupMenuItem<String>(
+                value: 'clear',
+                child: Row(
+                  children: [
+                    Icon(Icons.refresh_rounded, size: 18, color: AppColors.textPrimary),
+                    SizedBox(width: 12),
+                    Text('New Conversation'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'profile',
+                child: Row(
+                  children: [
+                    Icon(Icons.person_rounded, size: 18, color: AppColors.textPrimary),
+                    SizedBox(width: 12),
+                    Text('Profile Settings'),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -211,120 +345,775 @@ class _AIChatScreenState extends State<AIChatScreen> {
               ],
             ),
           ),
+          
+          // Enhanced floating user profile indicator - Always visible when profile exists
+          Consumer<UserProfileProvider>(
+            builder: (context, userProfileProvider, child) {
+              final userProfile = userProfileProvider.userProfile;
+              // Show floating indicator if user has profile and there are messages
+              if (userProfile != null && _messages.length > 1) {
+                return Positioned(
+                  top: 100, // Position below app bar
+                  right: 16,
+                  child: _buildEnhancedFloatingProfileIndicator(userProfile),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
         ],
       ),
     );
   }
 
   Widget _buildMessageBubble(ChatMessage message) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!message.isUser) ...[
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: AppColors.auraGradient1,
-              ),
-              child: const Icon(
-                Icons.psychology_rounded,
-                size: 18,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
-          
-          Flexible(
-            child: GlassWidget(
-              backgroundColor: message.isUser 
-                  ? AppColors.accentTeal.withValues(alpha: 0.2)
-                  : AppColors.glassWhite,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      message.text,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 14,
+    return Consumer<UserProfileProvider>(
+      builder: (context, userProfileProvider, child) {
+        final userProfile = userProfileProvider.userProfile;
+        
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            mainAxisAlignment: message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (!message.isUser) ...[
+                // Aura's Avatar with beautiful gradient and animation
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: AppColors.auraGradient1,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.accentTeal.withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _formatTime(message.timestamp),
-                      style: const TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 10,
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.psychology_rounded,
+                    size: 20,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
+              
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: message.isUser 
+                      ? CrossAxisAlignment.end 
+                      : CrossAxisAlignment.start,
+                  children: [
+                    // Name label for personalization
+                    if (!message.isUser) 
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4, left: 4),
+                        child: Text(
+                          'Aura',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.accentTeal,
+                          ),
+                        ),
+                      ),
+                    
+                    if (message.isUser && userProfile?.name != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4, right: 4),
+                        child: Text(
+                          _getFirstName(userProfile!.name),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    
+                    // Message bubble
+                    GlassWidget(
+                      backgroundColor: message.isUser 
+                          ? AppColors.accentTeal.withValues(alpha: 0.15)
+                          : AppColors.glassWhite,
+                      borderColor: message.isUser
+                          ? AppColors.accentTeal.withValues(alpha: 0.3)
+                          : AppColors.glassBorder,
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              message.text,
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 15,
+                                height: 1.4,
+                                fontWeight: message.isUser ? FontWeight.w500 : FontWeight.w400,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Text(
+                                  _formatTime(message.timestamp),
+                                  style: const TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                                if (message.isUser) ...[
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    Icons.check,
+                                    size: 12,
+                                    color: AppColors.textMuted.withValues(alpha: 0.6),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
+              
+              if (message.isUser) ...[
+                const SizedBox(width: 12),
+                // User's actual profile picture or elegant fallback
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.glassShadow.withValues(alpha: 0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: AppColors.accentTeal.withValues(alpha: 0.1),
+                    backgroundImage: userProfile?.photoUrl != null 
+                        ? NetworkImage(userProfile!.photoUrl!)
+                        : null,
+                    child: userProfile?.photoUrl == null
+                        ? Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  AppColors.accentTeal.withValues(alpha: 0.8),
+                                  AppColors.accentTeal.withValues(alpha: 0.6),
+                                ],
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.person_rounded,
+                              size: 20,
+                              color: Colors.white,
+                            ),
+                          )
+                        : null,
+                    onBackgroundImageError: (exception, stackTrace) {
+                      // Graceful fallback if profile image fails to load
+                      debugPrint('Profile image failed to load: $exception');
+                    },
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  String _getFirstName(String fullName) {
+    return fullName.split(' ').first;
+  }
+
+  /// Floating profile indicator showing user's picture and connection status
+  Widget _buildFloatingProfileIndicator(UserProfile userProfile) {
+    return GestureDetector(
+      onTap: () {
+        // Optional: Show user profile quick actions
+        _showProfileQuickActions(userProfile);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        child: GlassWidget(
+          backgroundColor: AppColors.glassWhite.withValues(alpha: 0.9),
+          borderColor: AppColors.accentTeal.withValues(alpha: 0.3),
+          radius: 25,
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // User's profile picture with online indicator
+                Stack(
+                  children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.accentTeal.withValues(alpha: 0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: CircleAvatar(
+                        radius: 17,
+                        backgroundColor: AppColors.accentTeal.withValues(alpha: 0.1),
+                        backgroundImage: userProfile.photoUrl != null 
+                            ? NetworkImage(userProfile.photoUrl!)
+                            : null,
+                        child: userProfile.photoUrl == null
+                            ? Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      AppColors.accentTeal.withValues(alpha: 0.8),
+                                      AppColors.accentTeal.withValues(alpha: 0.6),
+                                    ],
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.person_rounded,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : null,
+                      ),
+                    ),
+                    // Online indicator
+                    Positioned(
+                      bottom: 2,
+                      right: 2,
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981), // Green for active
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(width: 8),
+                
+                // User name and status
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _getFirstName(userProfile.name),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      'Connected 💙',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: AppColors.accentTeal.withValues(alpha: 0.8),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(width: 4),
+              ],
             ),
           ),
-          
-          if (message.isUser) ...[
-            const SizedBox(width: 8),
-            Container(
-              width: 32,
-              height: 32,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.accentTeal,
-              ),
-              child: const Icon(
-                Icons.person_rounded,
-                size: 18,
-                color: AppColors.textPrimary,
-              ),
+        ),
+      ),
+    );
+  }
+
+  /// Enhanced floating profile indicator with better visibility and animations
+  Widget _buildEnhancedFloatingProfileIndicator(UserProfile userProfile) {
+    return GestureDetector(
+      onTap: () {
+        _showProfileQuickActions(userProfile);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+        child: GlassWidget(
+          backgroundColor: AppColors.glassWhite.withValues(alpha: 0.95),
+          borderColor: AppColors.accentTeal.withValues(alpha: 0.4),
+          radius: 28,
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.accentTeal.withValues(alpha: 0.15),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+            BoxShadow(
+              color: AppColors.glassShadow.withValues(alpha: 0.1),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
           ],
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Enhanced user profile picture with pulse animation
+                Stack(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.accentTeal.withValues(alpha: 0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: AppColors.accentTeal.withValues(alpha: 0.1),
+                        backgroundImage: userProfile.photoUrl != null 
+                            ? NetworkImage(userProfile.photoUrl!)
+                            : null,
+                        child: userProfile.photoUrl == null
+                            ? Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      AppColors.accentTeal.withValues(alpha: 0.9),
+                                      AppColors.accentTeal.withValues(alpha: 0.7),
+                                    ],
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.person_rounded,
+                                  size: 22,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : null,
+                        onBackgroundImageError: (exception, stackTrace) {
+                          debugPrint('Enhanced floating profile image failed to load: $exception');
+                        },
+                      ),
+                    ),
+                    // Active status indicator with pulse animation
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 1000),
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981), // Green for active
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white,
+                            width: 2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                              blurRadius: 6,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(width: 10),
+                
+                // User info with enhanced styling
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _getFirstName(userProfile.name),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Active now',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: AppColors.accentTeal.withValues(alpha: 0.9),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(width: 6),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Show quick profile actions when floating indicator is tapped
+  void _showProfileQuickActions(UserProfile userProfile) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => GlassWidget(
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Profile header
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundImage: userProfile.photoUrl != null 
+                        ? NetworkImage(userProfile.photoUrl!)
+                        : null,
+                    backgroundColor: AppColors.accentTeal.withValues(alpha: 0.1),
+                    child: userProfile.photoUrl == null
+                        ? const Icon(
+                            Icons.person_rounded,
+                            color: AppColors.accentTeal,
+                            size: 28,
+                          )
+                        : null,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          userProfile.name,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          'Connected to Aura 💙',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // Quick actions
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildQuickActionButton(
+                    icon: Icons.refresh_rounded,
+                    label: 'New Chat',
+                    onTap: _showClearHistoryDialog,
+                  ),
+                  _buildQuickActionButton(
+                    icon: Icons.psychology_rounded,
+                    label: 'Mood Check',
+                    onTap: () {
+                      Navigator.pop(context);
+                      // Navigate to mood tracker if available
+                    },
+                  ),
+                  _buildQuickActionButton(
+                    icon: Icons.settings_rounded,
+                    label: 'Settings',
+                    onTap: () {
+                      Navigator.pop(context);
+                      // Navigate to settings
+                    },
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 12),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppColors.accentTeal.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.accentTeal.withValues(alpha: 0.2),
+                width: 1,
+              ),
+            ),
+            child: Icon(
+              icon,
+              color: AppColors.accentTeal,
+              size: 24,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textSecondary,
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildMessageInput() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: GlassWidget(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    return Consumer<UserProfileProvider>(
+      builder: (context, userProfileProvider, child) {
+        final userProfile = userProfileProvider.userProfile;
+        final hints = [
+          'Share your thoughts...',
+          'How are you feeling?',
+          'What\'s on your mind?',
+          'I\'m here to listen...',
+          'Tell me about your day...',
+        ];
+        
+        final firstName = userProfile?.name != null ? _getFirstName(userProfile!.name) : null;
+        final personalizedHints = firstName != null ? [
+          'Share your thoughts, $firstName...',
+          'How are you feeling today?',
+          'What\'s on your mind, $firstName?',
+          'I\'m here to support you...',
+          'Tell me about your day...',
+        ] : hints;
+        
+        final currentHint = personalizedHints[DateTime.now().second % personalizedHints.length];
+        
+        return Container(
+          padding: const EdgeInsets.all(16),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Expanded(
-                child: TextField(
-                  controller: _messageController,
-                  style: const TextStyle(color: AppColors.textPrimary),
-                  decoration: const InputDecoration(
-                    hintText: 'Share your thoughts...',
-                    hintStyle: TextStyle(color: AppColors.textMuted),
-                    border: InputBorder.none,
+              // Enhanced user's profile picture in input area - Always visible
+              Container(
+                margin: const EdgeInsets.only(bottom: 8, right: 12),
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.accentTeal.withValues(alpha: 0.3),
+                    width: 1.5,
                   ),
-                  maxLines: null,
-                  textCapitalization: TextCapitalization.sentences,
-                  onSubmitted: (_) => _sendMessage(),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.accentTeal.withValues(alpha: 0.15),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: CircleAvatar(
+                  radius: 16.5,
+                  backgroundColor: AppColors.accentTeal.withValues(alpha: 0.1),
+                  backgroundImage: userProfile?.photoUrl != null 
+                      ? NetworkImage(userProfile!.photoUrl!)
+                      : null,
+                  child: userProfile?.photoUrl == null
+                      ? Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                AppColors.accentTeal.withValues(alpha: 0.8),
+                                AppColors.accentTeal.withValues(alpha: 0.6),
+                              ],
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.person_rounded,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                        )
+                      : null,
+                  onBackgroundImageError: (exception, stackTrace) {
+                    debugPrint('Input area profile image failed to load: $exception');
+                  },
                 ),
               ),
-              IconButton(
-                onPressed: _isLoading ? null : _sendMessage,
-                icon: Icon(
-                  Icons.send_rounded,
-                  color: _isLoading ? AppColors.textMuted : AppColors.accentTeal,
+              
+              // Enhanced message input
+              Expanded(
+                child: GlassWidget(
+                  backgroundColor: AppColors.glassWhite,
+                  borderColor: AppColors.glassBorder.withValues(alpha: 0.6),
+                  child: Container(
+                    constraints: const BoxConstraints(
+                      maxHeight: 120, // Allows for multiline input
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _messageController,
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 15,
+                                height: 1.4,
+                              ),
+                              decoration: InputDecoration(
+                                hintText: currentHint,
+                                hintStyle: TextStyle(
+                                  color: AppColors.textMuted.withValues(alpha: 0.8),
+                                  fontSize: 15,
+                                ),
+                                border: InputBorder.none,
+                                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                              ),
+                              maxLines: null,
+                              minLines: 1,
+                              textCapitalization: TextCapitalization.sentences,
+                              onSubmitted: (_) => _sendMessage(),
+                              onChanged: (text) {
+                                setState(() {
+                                  // Update UI to reflect text input state
+                                });
+                              },
+                            ),
+                          ),
+                          
+                          // Enhanced send button
+                          Container(
+                            margin: const EdgeInsets.only(left: 8),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              child: IconButton(
+                                onPressed: _isLoading ? null : _sendMessage,
+                                icon: _isLoading
+                                    ? SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation(
+                                            AppColors.accentTeal.withValues(alpha: 0.6),
+                                          ),
+                                        ),
+                                      )
+                                    : Icon(
+                                        Icons.send_rounded,
+                                        color: _messageController.text.trim().isNotEmpty
+                                            ? AppColors.accentTeal
+                                            : AppColors.textMuted,
+                                      ),
+                                tooltip: _isLoading ? 'Sending...' : 'Send message',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -658,62 +1447,94 @@ You deserve help and support. Is there a trusted friend, family member, or menta
   }
 
   Widget _buildSuggestedResponses() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Wrap(
-        spacing: 8.0,
-        runSpacing: 8.0,
-        children: _suggestedResponses.map((response) {
-          return ActionChip(
-            label: Text(response),
-            labelStyle: const TextStyle(color: AppColors.textPrimary, fontSize: 12),
-            backgroundColor: AppColors.glassWhite,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-              side: BorderSide.none,
-            ),
-            onPressed: () {
-              _messageController.text = response;
-              _sendMessage();
-              setState(() {
-                _suggestedResponses = []; // Clear suggestions after selection
-              });
-            },
-          );
-        }).toList(),
-      ),
+    // Enhanced suggested responses that are more supportive and contextual
+    final defaultSuggestions = [
+      "I'm feeling anxious today 😰",
+      "Can you help me relax? 🌸",
+      "I need some motivation 💪",
+      "Tell me about breathing exercises 🫁",
+      "I'm struggling with sleep 😴",
+      "Help me process my emotions 💭",
+    ];
+    
+    final suggestions = _suggestedResponses.isNotEmpty ? _suggestedResponses : defaultSuggestions;
+    
+    return Consumer<UserProfileProvider>(
+      builder: (context, userProfileProvider, child) {
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (suggestions.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, bottom: 8),
+                  child: Text(
+                    'Quick ways to start:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary.withValues(alpha: 0.8),
+                    ),
+                  ),
+                ),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: suggestions.map((response) {
+                      return Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        child: GestureDetector(
+                          onTap: () {
+                            _messageController.text = response.replaceAll(RegExp(r'[😰🌸💪🫁😴💭]'), '').trim();
+                            _sendMessage();
+                            setState(() {
+                              _suggestedResponses = []; // Clear suggestions after selection
+                            });
+                          },
+                          child: GlassWidget(
+                            backgroundColor: AppColors.accentTeal.withValues(alpha: 0.08),
+                            borderColor: AppColors.accentTeal.withValues(alpha: 0.2),
+                            radius: 20,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    response,
+                                    style: const TextStyle(
+                                      color: AppColors.textPrimary,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Icon(
+                                    Icons.arrow_forward_rounded,
+                                    size: 14,
+                                    color: AppColors.accentTeal.withValues(alpha: 0.6),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 }
 
-class ChatMessage {
-  final String text;
-  final bool isUser;
-  final DateTime timestamp;
-  final String sessionId;
 
-  ChatMessage({
-    required this.text,
-    required this.isUser,
-    required this.timestamp,
-    required this.sessionId,
-  });
-
-  Map<String, dynamic> toMap() {
-    return {
-      'text': text,
-      'isUser': isUser,
-      'timestamp': timestamp.toIso8601String(),
-      'sessionId': sessionId,
-    };
-  }
-
-  factory ChatMessage.fromMap(Map<String, dynamic> map) {
-    return ChatMessage(
-      text: map['text'],
-      isUser: map['isUser'],
-      timestamp: DateTime.parse(map['timestamp']),
-      sessionId: map['sessionId'],
-    );
-  }
-}

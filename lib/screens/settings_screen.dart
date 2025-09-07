@@ -14,14 +14,8 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   // Settings state
-  bool _notificationsEnabled = true;
-  bool _dailyReminders = true;
-  bool _moodReminders = true;
-  bool _meditationReminders = false;
-  bool _weeklyReports = true;
   bool _dataAnalytics = true;
   bool _crashReporting = true;
-  String _reminderTime = '9:00 AM';
   String _theme = 'Auto';
   String _language = 'English';
 
@@ -43,11 +37,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: ListView(
               padding: const EdgeInsets.all(20),
               children: [
-                // Notifications Section
-                _buildNotificationSettings(),
-                
-                const SizedBox(height: 20),
-
                 // Appearance Section
                 _buildAppearanceSettings(),
                 
@@ -75,96 +64,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildNotificationSettings() {
-    return GlassWidget(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.notifications_rounded,
-                color: Colors.white.withValues(alpha: 0.9),
-                size: 24,
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Notifications',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 20),
-          
-          // Master notifications toggle
-          _buildSwitchTile(
-            'Enable Notifications',
-            'Receive push notifications from AuraCare',
-            _notificationsEnabled,
-            (value) => setState(() => _notificationsEnabled = value),
-          ),
-          
-          if (_notificationsEnabled) ...[
-            const SizedBox(height: 16),
-            
-            // Daily reminders
-            _buildSwitchTile(
-              'Daily Check-in Reminders',
-              'Get reminded to log your mood daily',
-              _dailyReminders,
-              (value) => setState(() => _dailyReminders = value),
-            ),
-            
-            const SizedBox(height: 12),
-            
-            // Mood reminders
-            _buildSwitchTile(
-              'Mood Tracking Reminders',
-              'Gentle reminders to track your emotions',
-              _moodReminders,
-              (value) => setState(() => _moodReminders = value),
-            ),
-            
-            const SizedBox(height: 12),
-            
-            // Meditation reminders
-            _buildSwitchTile(
-              'Meditation Reminders',
-              'Reminders for mindfulness and breathing exercises',
-              _meditationReminders,
-              (value) => setState(() => _meditationReminders = value),
-            ),
-            
-            const SizedBox(height: 12),
-            
-            // Weekly reports
-            _buildSwitchTile(
-              'Weekly Progress Reports',
-              'Receive weekly insights about your wellness journey',
-              _weeklyReports,
-              (value) => setState(() => _weeklyReports = value),
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Reminder time selector
-            _buildOptionTile(
-              'Reminder Time',
-              _reminderTime,
-              Icons.schedule_rounded,
-              () => _showTimePickerDialog(),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildAppearanceSettings() {
     return GlassWidget(
@@ -701,30 +601,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   // Dialog and action methods
-  void _showTimePickerDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
-        title: const Text('Select Reminder Time', style: TextStyle(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            '8:00 AM', '9:00 AM', '10:00 AM', '6:00 PM', '7:00 PM', '8:00 PM'
-          ].map((time) => ListTile(
-            title: Text(time, style: const TextStyle(color: Colors.white)),
-            onTap: () {
-              setState(() => _reminderTime = time);
-              Navigator.pop(context);
-            },
-            trailing: _reminderTime == time 
-                ? const Icon(Icons.check, color: Colors.green)
-                : null,
-          )).toList(),
-        ),
-      ),
-    );
-  }
 
   void _showThemeDialog() {
     showDialog(

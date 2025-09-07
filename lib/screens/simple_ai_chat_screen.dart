@@ -9,8 +9,10 @@ import '../widgets/glass_widgets.dart';
 import '../services/chat_session_service.dart';
 import '../services/gemini_service.dart';
 import '../services/user_profile_service.dart';
+import '../services/firebase_service.dart';
 import '../providers/auth_provider.dart';
 import '../providers/mood_provider.dart';
+import '../models/chat_message.dart';
 import '../utils/app_colors.dart';
 
 class SimpleAIChatScreen extends StatefulWidget {
@@ -27,6 +29,7 @@ class _SimpleAIChatScreenState extends State<SimpleAIChatScreen> {
   final GeminiService _geminiService = GeminiService();
   final ChatSessionService _chatSessionService = ChatSessionService();
   final UserProfileService _userProfileService = UserProfileService();
+  final FirebaseService _firebaseService = FirebaseService();
   String? _sessionId;
   String? _currentUserId;
   
@@ -114,6 +117,7 @@ class _SimpleAIChatScreenState extends State<SimpleAIChatScreen> {
           text: "$welcomeMessage\n\n✨ Created by Junior Developer, Abhishek Maurya",
           isUser: false,
           timestamp: DateTime.now(),
+          sessionId: _sessionId ?? 'welcome',
         ),
       );
     });
@@ -125,19 +129,37 @@ class _SimpleAIChatScreenState extends State<SimpleAIChatScreen> {
       _isLoading = true;
     });
     try {
-      final history = await _chatSessionService.loadConversationHistory(_sessionId!); // Assuming _chatSessionService is available
+      // Load messages from Firebase with proper timestamps
+      final messages = await _firebaseService.getChatMessages(
+        sessionId: _sessionId,
+        limit: 100,
+      );
+      
       setState(() {
         _messages.clear();
-        for (var msg in history) {
-          _messages.add(ChatMessage(
-            text: msg['content']!,
-            isUser: msg['role'] == 'user',
-            timestamp: DateTime.now(), // Firestore doesn't store timestamp per message in history
-          ));
-        }
+        _messages.addAll(messages); // Messages already have proper timestamps from Firestore
       });
+      
+      debugPrint('Loaded ${messages.length} messages from Firebase with proper timestamps');
     } catch (e) {
-      debugPrint('Error loading chat history: $e');
+      debugPrint('Error loading chat history from Firebase: $e');
+      // Fallback to session service if Firebase fails
+      try {
+        final history = await _chatSessionService.loadConversationHistory(_sessionId!);
+        setState(() {
+          _messages.clear();
+          for (var msg in history) {
+            _messages.add(ChatMessage(
+              text: msg['content']!,
+              isUser: msg['role'] == 'user',
+              timestamp: DateTime.now(), // Fallback timestamp
+              sessionId: _sessionId!,
+            ));
+          }
+        });
+      } catch (fallbackError) {
+        debugPrint('Fallback chat history loading also failed: $fallbackError');
+      }
     } finally {
       setState(() {
         _isLoading = false;
@@ -406,6 +428,7 @@ class _SimpleAIChatScreenState extends State<SimpleAIChatScreen> {
           text: userMessage,
           isUser: true,
           timestamp: DateTime.now(),
+          sessionId: _sessionId ?? 'default',
         ),
       );
       _isLoading = true;
@@ -433,6 +456,7 @@ class _SimpleAIChatScreenState extends State<SimpleAIChatScreen> {
               text: aiResponse,
               isUser: false,
               timestamp: DateTime.now(),
+              sessionId: _sessionId ?? 'default',
             ),
           );
           _isLoading = false;
@@ -443,6 +467,9 @@ class _SimpleAIChatScreenState extends State<SimpleAIChatScreen> {
         
         // 🆕 AUTO-SAVE: Save conversation after each exchange
         await _saveCurrentSession();
+        
+        // Save messages to Firebase with proper timestamps
+        await _saveMessagesToFirebase();
       }
     } catch (e) {
       debugPrint('ERROR in _sendMessage: $e');
@@ -453,6 +480,7 @@ class _SimpleAIChatScreenState extends State<SimpleAIChatScreen> {
               text: "I'm sorry, I'm having trouble responding right now. Please try again!",
               isUser: false,
               timestamp: DateTime.now(),
+              sessionId: _sessionId ?? 'default',
             ),
           );
           _isLoading = false;
@@ -555,6 +583,29 @@ class _SimpleAIChatScreenState extends State<SimpleAIChatScreen> {
     }
     
     return topics;
+  }
+
+  /// Save the last two messages (user + AI response) to Firebase with proper timestamps
+  Future<void> _saveMessagesToFirebase() async {
+    try {
+      if (_messages.length >= 2) {
+        // Save the last user message and AI response
+        final userMessage = _messages[_messages.length - 2];
+        final aiMessage = _messages[_messages.length - 1];
+        
+        if (userMessage.isUser) {
+          await _firebaseService.saveChatMessage(userMessage);
+          debugPrint('Saved user message to Firebase with server timestamp');
+        }
+        
+        if (!aiMessage.isUser) {
+          await _firebaseService.saveChatMessage(aiMessage);
+          debugPrint('Saved AI message to Firebase with server timestamp');
+        }
+      }
+    } catch (e) {
+      debugPrint('Error saving messages to Firebase: $e');
+    }
   }
 
   void _scrollToBottom() {
@@ -1268,16 +1319,6 @@ Download: [App Store/Play Store Link]''';
   }
 }
 
-class ChatMessage {
-  final String text;
-  final bool isUser;
-  final DateTime timestamp;
 
-  ChatMessage({
-    required this.text,
-    required this.isUser,
-    required this.timestamp,
-  });
-}
 
 

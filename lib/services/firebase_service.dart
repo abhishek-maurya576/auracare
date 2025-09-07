@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../screens/ai_chat_screen.dart';
+import '../models/chat_message.dart';
 
 class FirebaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -200,7 +200,7 @@ class FirebaseService {
     }
   }
 
-  // Chat Messages Collection
+  // Chat Messages Collection - Enhanced with proper timestamp handling
   Future<void> saveChatMessage(ChatMessage message) async {
     final userId = currentUserId;
     if (userId == null) throw 'User not authenticated';
@@ -210,13 +210,13 @@ class FirebaseService {
           .collection('users')
           .doc(userId)
           .collection('chat_messages')
-          .add(message.toMap());
+          .add(message.toFirestoreMap()); // Use Firestore-specific mapping with server timestamp
     } catch (e) {
       throw 'Failed to save chat message: $e';
     }
   }
 
-  // Get chat messages with session grouping
+  // Get chat messages with session grouping - Enhanced with proper timestamp handling
   Future<List<ChatMessage>> getChatMessages({
     int limit = 100,
     String? sessionId,
@@ -238,8 +238,7 @@ class FirebaseService {
 
       final snapshot = await query.get();
       return snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return ChatMessage.fromMap(data);
+        return ChatMessage.fromFirestore(doc); // Use Firestore-specific parsing
       }).toList();
     } catch (e) {
       throw 'Failed to get chat messages: $e';
