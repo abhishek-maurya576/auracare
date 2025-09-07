@@ -123,9 +123,9 @@ class _CrisisInterventionScreenState extends State<CrisisInterventionScreen>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppColors.primaryColor.withOpacity(0.1),
-              AppColors.secondaryColor.withOpacity(0.1),
-              Colors.red.withOpacity(0.05),
+              AppColors.primaryColor.withValues(alpha: 26),
+              AppColors.secondaryColor.withValues(alpha: 26),
+              Colors.red.withValues(alpha: 13),
             ],
           ),
         ),
@@ -217,7 +217,7 @@ class _CrisisInterventionScreenState extends State<CrisisInterventionScreen>
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.2),
+                      color: Colors.red.withValues(alpha: 51),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -247,7 +247,7 @@ class _CrisisInterventionScreenState extends State<CrisisInterventionScreen>
                     'Immediate help is available',
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 204),
                     ),
                   ),
                 ],
@@ -362,10 +362,10 @@ class _CrisisInterventionScreenState extends State<CrisisInterventionScreen>
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withValues(alpha: 26),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.white.withOpacity(0.2),
+          color: Colors.white.withValues(alpha: 51),
           width: 1,
         ),
       ),
@@ -385,7 +385,7 @@ class _CrisisInterventionScreenState extends State<CrisisInterventionScreen>
             resource.description,
             style: TextStyle(
               fontSize: 14,
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 204),
             ),
           ),
           const SizedBox(height: 12),
@@ -513,7 +513,7 @@ class _CrisisInterventionScreenState extends State<CrisisInterventionScreen>
                         width: 24,
                         height: 24,
                         decoration: BoxDecoration(
-                          color: AppColors.primaryColor.withOpacity(0.3),
+                          color: AppColors.primaryColor.withValues(alpha: 77),
                           shape: BoxShape.circle,
                         ),
                         child: Center(
@@ -533,7 +533,7 @@ class _CrisisInterventionScreenState extends State<CrisisInterventionScreen>
                           step,
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 230),
                             height: 1.4,
                           ),
                         ),
@@ -585,7 +585,7 @@ class _CrisisInterventionScreenState extends State<CrisisInterventionScreen>
                   Icon(
                     Icons.arrow_forward_ios,
                     size: 16,
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withValues(alpha: 179),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -593,7 +593,7 @@ class _CrisisInterventionScreenState extends State<CrisisInterventionScreen>
                       action,
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 230),
                         height: 1.4,
                       ),
                     ),
