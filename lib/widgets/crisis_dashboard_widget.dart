@@ -35,7 +35,7 @@ class CrisisDashboardWidget extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isInCrisis ? Colors.red.withOpacity(0.5) : Colors.orange.withOpacity(0.3),
+            color: isInCrisis ? Colors.red.withValues(alpha: 128) : Colors.orange.withValues(alpha: 77),
             width: 2,
           ),
         ),
@@ -65,7 +65,7 @@ class CrisisDashboardWidget extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: isInCrisis ? Colors.red.withOpacity(0.2) : Colors.orange.withOpacity(0.2),
+            color: isInCrisis ? Colors.red.withValues(alpha: 51) : Colors.orange.withValues(alpha: 51),
             shape: BoxShape.circle,
           ),
           child: Icon(
@@ -93,7 +93,7 @@ class CrisisDashboardWidget extends StatelessWidget {
                     : 'Recent activity detected',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 179),
                 ),
               ),
             ],
@@ -103,7 +103,7 @@ class CrisisDashboardWidget extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.red.withOpacity(0.3),
+              color: Colors.red.withValues(alpha: 77),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Text(
@@ -123,10 +123,10 @@ class CrisisDashboardWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.1),
+        color: Colors.red.withValues(alpha: 26),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: Colors.red.withOpacity(0.3),
+          color: Colors.red.withValues(alpha: 77),
           width: 1,
         ),
       ),
@@ -154,7 +154,7 @@ class CrisisDashboardWidget extends StatelessWidget {
                 'Severity: ${activeAlert.severityLevel}/10',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 204),
                 ),
               ),
             ],
@@ -164,7 +164,7 @@ class CrisisDashboardWidget extends StatelessWidget {
             activeAlert.message,
             style: TextStyle(
               fontSize: 12,
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 230),
               height: 1.3,
             ),
             maxLines: 2,
@@ -224,10 +224,10 @@ class CrisisDashboardWidget extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 26),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: color.withOpacity(0.3),
+            color: color.withValues(alpha: 77),
             width: 1,
           ),
         ),
@@ -243,7 +243,7 @@ class CrisisDashboardWidget extends StatelessWidget {
               label,
               style: TextStyle(
                 fontSize: 10,
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 230),
                 fontWeight: FontWeight.w500,
               ),
               textAlign: TextAlign.center,
@@ -263,7 +263,7 @@ class CrisisDashboardWidget extends StatelessWidget {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: Colors.white.withOpacity(0.8),
+            color: Colors.white.withValues(alpha: 204),
           ),
         ),
         const SizedBox(height: 8),
@@ -278,10 +278,10 @@ class CrisisDashboardWidget extends StatelessWidget {
                 margin: const EdgeInsets.only(right: 8),
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: _getSeverityColor(alert.severityLevel).withOpacity(0.2),
+                  color: _getSeverityColor(alert.severityLevel).withValues(alpha: 51),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: _getSeverityColor(alert.severityLevel).withOpacity(0.4),
+                    color: _getSeverityColor(alert.severityLevel).withValues(alpha: 102),
                     width: 1,
                   ),
                 ),
@@ -300,7 +300,7 @@ class CrisisDashboardWidget extends StatelessWidget {
                       alert.timeSinceCreated.split(' ')[0],
                       style: TextStyle(
                         fontSize: 8,
-                        color: Colors.white.withOpacity(0.7),
+                        color: Colors.white.withValues(alpha: 179),
                       ),
                     ),
                   ],
@@ -404,7 +404,7 @@ class CrisisDashboardWidget extends StatelessWidget {
           Text(
             info,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 179),
               fontSize: 12,
             ),
           ),
