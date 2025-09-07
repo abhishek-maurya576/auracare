@@ -261,65 +261,97 @@ class _MoodCheckCardState extends State<MoodCheckCard> {
                 
                 const SizedBox(height: 24),
                 
-                // Action buttons
-                Row(
+                // Action buttons - Responsive layout
+                Column(
                   children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: selectedMood != null && !moodProvider.isLoading 
-                            ? () => _analyzeWithAI(moodProvider) 
-                            : null,
-                        icon: const Icon(Icons.psychology_rounded, size: 20),
-                        label: const Text('Analyze with AI'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accentTeal.withAlpha((255 * 0.85).toInt()),
-                          disabledBackgroundColor: AppColors.textMuted.withAlpha((255 * 0.3).toInt()),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                    // Main action buttons row
+                    Row(
+                      children: [
+                        Flexible(
+                          flex: 1,
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: selectedMood != null && !moodProvider.isLoading 
+                                  ? () => _analyzeWithAI(moodProvider) 
+                                  : null,
+                              icon: const Icon(Icons.psychology_rounded, size: 18),
+                              label: const FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  'Analyze with AI',
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.accentTeal.withAlpha((255 * 0.85).toInt()),
+                                disabledBackgroundColor: AppColors.textMuted.withAlpha((255 * 0.3).toInt()),
+                                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    
-                    const SizedBox(width: 12),
+                        
+                        const SizedBox(width: 8),
 
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: selectedMood != null && !moodProvider.isLoading
-                            ? () => _saveMoodEntry(moodProvider)
-                            : null,
-                        icon: const Icon(Icons.save_rounded, size: 20),
-                        label: const Text('Save Mood'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accentBlue.withAlpha((255 * 0.85).toInt()),
-                          disabledBackgroundColor: AppColors.textMuted.withAlpha((255 * 0.3).toInt()),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        Flexible(
+                          flex: 1,
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: selectedMood != null && !moodProvider.isLoading
+                                  ? () => _saveMoodEntry(moodProvider)
+                                  : null,
+                              icon: const Icon(Icons.save_rounded, size: 18),
+                              label: const FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  'Save Mood',
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.accentBlue.withAlpha((255 * 0.85).toInt()),
+                                disabledBackgroundColor: AppColors.textMuted.withAlpha((255 * 0.3).toInt()),
+                                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    
-                    const SizedBox(width: 12),
-                    
-                    // Toggle note field
-                    IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _showNoteField = !_showNoteField;
-                        });
-                      },
-                      icon: Icon(
-                        _showNoteField ? Icons.note_rounded : Icons.note_add_rounded,
-                        color: _showNoteField ? AppColors.accentTeal : AppColors.textSecondary,
-                      ),
-                      tooltip: _showNoteField ? 'Hide note' : 'Add note',
-                    ),
-                    
-                    const SizedBox(width: 8),
-                    
-                    TextButton.icon(
-                      onPressed: () {
-                        // TODO: Navigate to journal
-                      },
-                      icon: const Icon(Icons.edit_note_rounded, size: 20),
-                      label: const Text('Journal'),
+                        
+                        const SizedBox(width: 8),
+                        
+                        // Toggle note field
+                        Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.glassWhite,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: _showNoteField ? AppColors.accentTeal : AppColors.glassBorder,
+                              width: 1,
+                            ),
+                          ),
+                          child: IconButton(
+                            onPressed: () {
+                              setState(() {
+                                _showNoteField = !_showNoteField;
+                              });
+                            },
+                            icon: Icon(
+                              _showNoteField ? Icons.note_rounded : Icons.note_add_rounded,
+                              color: _showNoteField ? AppColors.accentTeal : AppColors.textSecondary,
+                              size: 20,
+                            ),
+                            tooltip: _showNoteField ? 'Hide note' : 'Add note',
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -347,8 +379,8 @@ class _MoodCheckCardState extends State<MoodCheckCard> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: isSelected 
-              ? Colors.white.withOpacity(0.2)
-              : Colors.white.withOpacity(0.1),
+              ? Colors.white.withValues(alpha: 51)
+              : Colors.white.withValues(alpha: 26),
           border: isSelected 
               ? Border.all(color: Colors.white, width: 2)
               : null,

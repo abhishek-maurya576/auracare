@@ -174,8 +174,8 @@ class _MoodCheckCardState extends State<MoodCheckCard> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: isSelected 
-              ? Colors.white.withOpacity(0.2)
-              : Colors.white.withOpacity(0.1),
+              ? Colors.white.withValues(alpha: 51)
+              : Colors.white.withValues(alpha: 26),
           border: isSelected 
               ? Border.all(color: Colors.white, width: 2)
               : null,
