@@ -25,11 +25,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void initState() {
     super.initState();
-    print('EditProfileScreen initState called');
+    debugPrint('EditProfileScreen initState called');
     
     // Log all avatar paths for debugging
     for (int i = 0; i < _avatarPaths.length; i++) {
-      print('Avatar path $i: ${_avatarPaths[i]}');
+      debugPrint('Avatar path $i: ${_avatarPaths[i]}');
     }
     
     // Pre-cache all avatar images using utility
@@ -37,11 +37,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = Provider.of<AuthProvider>(context, listen: false).user;
-      print('User from AuthProvider: $user');
+      debugPrint('User from AuthProvider: $user');
       if (user != null) {
         _nameController.text = user.name;
-        print('User name: ${user.name}');
-        print('User photoUrl: ${user.photoUrl}');
+        debugPrint('User name: ${user.name}');
+        debugPrint('User photoUrl: ${user.photoUrl}');
         
         // Find the index of the user's avatar using utility
         if (user.photoUrl != null) {
@@ -50,10 +50,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           setState(() {
             _selectedAvatarIndex = avatarIndex;
           });
-          print('Selected avatar index set to: $_selectedAvatarIndex (from path: ${user.photoUrl})');
+          debugPrint('Selected avatar index set to: $_selectedAvatarIndex (from path: ${user.photoUrl})');
         } else {
           // If user has no avatar, use the default (index 0)
-          print('User has no avatar. Using default avatar.');
+          debugPrint('User has no avatar. Using default avatar.');
           setState(() {
             _selectedAvatarIndex = 0;
           });
@@ -206,7 +206,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.purple.withOpacity(0.3),
+                  color: Colors.purple.withValues(alpha: 77),
                   blurRadius: 15,
                   spreadRadius: 2,
                 ),
@@ -217,7 +217,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 photoUrl: _avatarPaths[_selectedAvatarIndex],
                 size: 140,
                 placeholder: Container(
-                  color: Colors.grey.withOpacity(0.2),
+                  color: Colors.grey.withValues(alpha: 51),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -308,7 +308,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.purple.withOpacity(0.2),
+                  color: Colors.purple.withValues(alpha: 51),
                   blurRadius: 8,
                   spreadRadius: 1,
                 ),
@@ -349,7 +349,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               
               return GestureDetector(
                 onTap: () {
-                  print('Avatar selected at index: $index, path: ${_avatarPaths[index]}');
+                  debugPrint('Avatar selected at index: $index, path: ${_avatarPaths[index]}');
                   setState(() {
                     _selectedAvatarIndex = index;
                   });
@@ -378,7 +378,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     shape: BoxShape.circle,
                     boxShadow: isSelected ? [
                       BoxShadow(
-                        color: Colors.purple.withOpacity(0.6),
+                        color: Colors.purple.withValues(alpha: 153),
                         blurRadius: 12,
                         spreadRadius: 3,
                       )
@@ -399,8 +399,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           ),
                           child: InkWell(
                             customBorder: const CircleBorder(),
-                            splashColor: Colors.purple.withOpacity(0.3),
-                            highlightColor: Colors.purple.withOpacity(0.1),
+                            splashColor: Colors.purple.withValues(alpha: 77),
+                            highlightColor: Colors.purple.withValues(alpha: 26),
                             onTap: () {
                               setState(() {
                                 _selectedAvatarIndex = index;
@@ -429,7 +429,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 photoUrl: _avatarPaths[index],
                                 size: 80,
                                 placeholder: Container(
-                                  color: Colors.grey.withOpacity(0.3),
+                                  color: Colors.grey.withValues(alpha: 77),
                                   child: const Icon(Icons.person, color: Colors.white),
                                 ),
                               ),
@@ -450,7 +450,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.3),
+                                  color: Colors.black.withValues(alpha: 77),
                                   blurRadius: 4,
                                   offset: const Offset(0, 2),
                                 ),
@@ -607,8 +607,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               boxShadow: [
                 BoxShadow(
                   color: _isLoading 
-                      ? Colors.purple.withOpacity(0.3) 
-                      : Colors.purple.withOpacity(0.5),
+                      ? Colors.purple.withValues(alpha: 77) 
+                      : Colors.purple.withValues(alpha: 128),
                   blurRadius: 12,
                   spreadRadius: 2,
                   offset: const Offset(0, 4),
@@ -717,13 +717,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     try {
       final selectedAvatarPath = _avatarPaths[_selectedAvatarIndex];
       
-      print('Saving profile with name: ${_nameController.text.trim()}');
-      print('Selected avatar index: $_selectedAvatarIndex');
-      print('Selected avatar path: $selectedAvatarPath');
+      debugPrint('Saving profile with name: ${_nameController.text.trim()}');
+      debugPrint('Selected avatar index: $_selectedAvatarIndex');
+      debugPrint('Selected avatar path: $selectedAvatarPath');
       
       // Verify the avatar path is valid
       if (!AvatarUtils.isValidAvatarPath(selectedAvatarPath)) {
-        print('Invalid avatar path detected: $selectedAvatarPath');
+        debugPrint('Invalid avatar path detected: $selectedAvatarPath');
         throw 'Selected avatar is invalid. Please try another avatar.';
       }
       
@@ -736,7 +736,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       // Also update the user profile in UserProfileProvider if it's being used
       final userProfileProvider = Provider.of<UserProfileProvider>(context, listen: false);
       if (userProfileProvider.hasProfile) {
-        print('Updating UserProfileProvider with photoUrl: $selectedAvatarPath');
+        debugPrint('Updating UserProfileProvider with photoUrl: $selectedAvatarPath');
         await userProfileProvider.updateProfile({
           'name': _nameController.text.trim(),
           'photoUrl': selectedAvatarPath,
@@ -778,7 +778,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         Navigator.pop(context);
       }
     } catch (e) {
-      print('Error updating profile: $e');
+      debugPrint('Error updating profile: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -815,11 +815,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
 extension ColorExtension on Color {
   Color withValues({double? red, double? green, double? blue, double? alpha}) {
-    return Color.fromRGBO(
-      (red != null) ? (red * 255).round() : this.red,
-      (green != null) ? (green * 255).round() : this.green,
-      (blue != null) ? (blue * 255).round() : this.blue,
-      alpha ?? this.alpha.toDouble(),
+    return Color.fromARGB(
+      (alpha != null) ? (alpha * 255).round().toInt() : a.toInt(),
+      (red != null) ? (red * 255).round().toInt() : r.toInt(),
+      (green != null) ? (green * 255).round().toInt() : g.toInt(),
+      (blue != null) ? (blue * 255).round().toInt() : b.toInt(),
     );
   }
 }

@@ -153,7 +153,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                   : 'As a user under 18, parental consent is required for full app functionality.',
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 204),
                 height: 1.4,
               ),
             ),
@@ -179,10 +179,10 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
+                  color: Colors.green.withValues(alpha: 26),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: Colors.green.withOpacity(0.3),
+                    color: Colors.green.withValues(alpha: 77),
                     width: 1,
                   ),
                 ),
@@ -300,7 +300,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
               'Control how long your data is stored in the app.',
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 204),
               ),
             ),
             const SizedBox(height: 16),
@@ -360,7 +360,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
               'When enabled, your conversations and data are not linked to your profile.',
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 204),
                 height: 1.4,
               ),
             ),
@@ -420,7 +420,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
               'Manage your personal data and account information.',
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 204),
               ),
             ),
             const SizedBox(height: 16),
@@ -486,7 +486,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                   description,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withValues(alpha: 179),
                     height: 1.3,
                   ),
                 ),
@@ -520,7 +520,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withValues(alpha: 26),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(

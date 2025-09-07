@@ -29,7 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // Debug user photo URL
       final user = provider.Provider.of<AuthProvider>(context, listen: false).user;
       if (user != null) {
-        print('ProfileScreen - User photoUrl: ${user.photoUrl}');
+        debugPrint('ProfileScreen - User photoUrl: ${user.photoUrl}');
       }
     });
   }
@@ -185,7 +185,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
+                        color: Colors.black.withValues(alpha: 51),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),
