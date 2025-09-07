@@ -179,7 +179,7 @@ class _JournalScreenState extends State<JournalScreen> with TickerProviderStateM
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppColors.primaryColor.withOpacity(0.2),
+                      color: AppColors.primaryColor.withValues(alpha: 51),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -233,7 +233,7 @@ class _JournalScreenState extends State<JournalScreen> with TickerProviderStateM
                 entry.preview,
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 204),
                   height: 1.4,
                 ),
                 maxLines: 3,
@@ -245,14 +245,14 @@ class _JournalScreenState extends State<JournalScreen> with TickerProviderStateM
                   Icon(
                     Icons.access_time,
                     size: 14,
-                    color: Colors.white.withOpacity(0.6),
+                    color: Colors.white.withValues(alpha: 153),
                   ),
                   const SizedBox(width: 4),
                   Text(
                     entry.formattedDate,
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.white.withOpacity(0.6),
+                      color: Colors.white.withValues(alpha: 153),
                     ),
                   ),
                   const Spacer(),
@@ -260,7 +260,7 @@ class _JournalScreenState extends State<JournalScreen> with TickerProviderStateM
                     entry.readingTime,
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.white.withOpacity(0.6),
+                      color: Colors.white.withValues(alpha: 153),
                     ),
                   ),
                 ],
@@ -273,14 +273,14 @@ class _JournalScreenState extends State<JournalScreen> with TickerProviderStateM
                   children: entry.tags.take(3).map((tag) => Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
+                      color: Colors.white.withValues(alpha: 26),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       '#$tag',
                       style: TextStyle(
                         fontSize: 10,
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 204),
                       ),
                     ),
                   )).toList(),
@@ -357,7 +357,7 @@ class _JournalScreenState extends State<JournalScreen> with TickerProviderStateM
                       children: _statistics!.mostUsedTags.map((tag) => Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: AppColors.primaryColor.withOpacity(0.2),
+                          color: AppColors.primaryColor.withValues(alpha: 51),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Text(
@@ -388,7 +388,7 @@ class _JournalScreenState extends State<JournalScreen> with TickerProviderStateM
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
+                color: color.withValues(alpha: 51),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: color, size: 24),
@@ -402,7 +402,7 @@ class _JournalScreenState extends State<JournalScreen> with TickerProviderStateM
                     title,
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 204),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -454,7 +454,7 @@ class _JournalScreenState extends State<JournalScreen> with TickerProviderStateM
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryColor.withOpacity(0.2),
+                    color: AppColors.primaryColor.withValues(alpha: 51),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
@@ -479,7 +479,7 @@ class _JournalScreenState extends State<JournalScreen> with TickerProviderStateM
               'Get a personalized writing prompt based on your current mood and recent entries.',
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 204),
                 height: 1.4,
               ),
             ),
@@ -539,14 +539,14 @@ class _JournalScreenState extends State<JournalScreen> with TickerProviderStateM
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
+                      color: Colors.white.withValues(alpha: 26),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       'Level ${prompt.difficulty}',
                       style: TextStyle(
                         fontSize: 10,
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 204),
                       ),
                     ),
                   ),
@@ -557,7 +557,7 @@ class _JournalScreenState extends State<JournalScreen> with TickerProviderStateM
                 prompt.prompt,
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 230),
                   height: 1.4,
                 ),
               ),
@@ -593,7 +593,7 @@ class _JournalScreenState extends State<JournalScreen> with TickerProviderStateM
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: AppColors.primaryColor.withOpacity(0.1),
+                color: AppColors.primaryColor.withValues(alpha: 26),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -617,7 +617,7 @@ class _JournalScreenState extends State<JournalScreen> with TickerProviderStateM
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 204),
                 height: 1.4,
               ),
             ).animate(delay: 400.ms).fadeIn(),

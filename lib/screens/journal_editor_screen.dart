@@ -202,7 +202,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryColor.withOpacity(0.2),
+                  color: AppColors.primaryColor.withValues(alpha: 51),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
@@ -231,7 +231,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
                 '$_wordCount words',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 179),
                 ),
               ),
               const SizedBox(width: 12),
@@ -294,7 +294,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
         decoration: InputDecoration(
           hintText: 'Entry title (optional)',
           hintStyle: TextStyle(
-            color: Colors.white.withOpacity(0.5),
+            color: Colors.white.withValues(alpha: 128),
             fontWeight: FontWeight.normal,
           ),
           border: InputBorder.none,
@@ -321,7 +321,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
               ? 'Continue writing...'
               : 'What\'s on your mind?',
           hintStyle: TextStyle(
-            color: Colors.white.withOpacity(0.5),
+            color: Colors.white.withValues(alpha: 128),
           ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.all(20),
@@ -371,7 +371,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
                 'No tags added yet. Tags help you organize and find your entries.',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.white.withOpacity(0.6),
+                  color: Colors.white.withValues(alpha: 153),
                 ),
               )
             else
@@ -390,7 +390,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.primaryColor.withOpacity(0.2),
+        color: AppColors.primaryColor.withValues(alpha: 51),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -409,7 +409,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
             child: Icon(
               Icons.close,
               size: 16,
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 179),
             ),
           ),
         ],
@@ -429,14 +429,14 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
                 Icon(
                   Icons.circle,
                   size: 8,
-                  color: Colors.orange.withOpacity(0.8),
+                  color: Colors.orange.withValues(alpha: 204),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   'Unsaved changes',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white.withOpacity(0.6),
+                    color: Colors.white.withValues(alpha: 153),
                   ),
                 ),
               ],
@@ -447,14 +447,14 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
                 Icon(
                   Icons.check_circle,
                   size: 16,
-                  color: Colors.green.withOpacity(0.8),
+                  color: Colors.green.withValues(alpha: 204),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   'Saved',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white.withOpacity(0.6),
+                    color: Colors.white.withValues(alpha: 153),
                   ),
                 ),
               ],
@@ -556,7 +556,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
           children: JournalEntryType.values.map((type) => ListTile(
             leading: Text(type.icon, style: const TextStyle(fontSize: 20)),
             title: Text(type.displayName, style: const TextStyle(color: Colors.white)),
-            subtitle: Text(type.description, style: TextStyle(color: Colors.white.withOpacity(0.7))),
+            subtitle: Text(type.description, style: TextStyle(color: Colors.white.withValues(alpha: 179))),
             onTap: () {
               setState(() {
                 _selectedType = type;

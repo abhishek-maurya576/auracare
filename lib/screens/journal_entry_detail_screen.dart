@@ -50,7 +50,7 @@ class _JournalEntryDetailScreenState extends State<JournalEntryDetailScreen> {
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: _showAppBarTitle 
-            ? Colors.black.withOpacity(0.3)
+            ? Colors.black.withValues(alpha: 77)
             : Colors.transparent,
         elevation: 0,
         leading: IconButton(
@@ -162,7 +162,7 @@ class _JournalEntryDetailScreenState extends State<JournalEntryDetailScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryColor.withOpacity(0.2),
+                    color: AppColors.primaryColor.withValues(alpha: 51),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
@@ -189,7 +189,7 @@ class _JournalEntryDetailScreenState extends State<JournalEntryDetailScreen> {
                   widget.entry.formattedDate,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withValues(alpha: 179),
                   ),
                 ),
               ],
@@ -242,7 +242,7 @@ class _JournalEntryDetailScreenState extends State<JournalEntryDetailScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: (color ?? Colors.white).withOpacity(0.1),
+        color: (color ?? Colors.white).withValues(alpha: 26),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -251,14 +251,14 @@ class _JournalEntryDetailScreenState extends State<JournalEntryDetailScreen> {
           Icon(
             icon,
             size: 14,
-            color: color ?? Colors.white.withOpacity(0.7),
+            color: color ?? Colors.white.withValues(alpha: 179),
           ),
           const SizedBox(width: 4),
           Text(
             text,
             style: TextStyle(
               fontSize: 12,
-              color: color ?? Colors.white.withOpacity(0.7),
+              color: color ?? Colors.white.withValues(alpha: 179),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -294,14 +294,14 @@ class _JournalEntryDetailScreenState extends State<JournalEntryDetailScreen> {
                   Icon(
                     Icons.tag,
                     size: 16,
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withValues(alpha: 179),
                   ),
                   const SizedBox(width: 8),
                   Text(
                     'Tags',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.white.withOpacity(0.7),
+                      color: Colors.white.withValues(alpha: 179),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -314,7 +314,7 @@ class _JournalEntryDetailScreenState extends State<JournalEntryDetailScreen> {
                 children: widget.entry.tags.map((tag) => Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryColor.withOpacity(0.2),
+                    color: AppColors.primaryColor.withValues(alpha: 51),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
@@ -345,7 +345,7 @@ class _JournalEntryDetailScreenState extends State<JournalEntryDetailScreen> {
                 Icon(
                   Icons.info_outline,
                   size: 18,
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 179),
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -353,7 +353,7 @@ class _JournalEntryDetailScreenState extends State<JournalEntryDetailScreen> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 230),
                   ),
                 ),
               ],
@@ -385,7 +385,7 @@ class _JournalEntryDetailScreenState extends State<JournalEntryDetailScreen> {
               label,
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.white.withOpacity(0.6),
+                color: Colors.white.withValues(alpha: 153),
               ),
             ),
           ),
@@ -396,7 +396,7 @@ class _JournalEntryDetailScreenState extends State<JournalEntryDetailScreen> {
                   Icon(
                     icon,
                     size: 16,
-                    color: iconColor ?? Colors.white.withOpacity(0.8),
+                    color: iconColor ?? Colors.white.withValues(alpha: 204),
                   ),
                   const SizedBox(width: 6),
                 ],
@@ -404,7 +404,7 @@ class _JournalEntryDetailScreenState extends State<JournalEntryDetailScreen> {
                   value,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 230),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
