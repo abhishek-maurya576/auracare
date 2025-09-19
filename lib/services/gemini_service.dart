@@ -104,11 +104,16 @@ class GeminiService {
     final profile = getUserProfile(userId);
     final moodData = getUserMoodData(userId);
     
-    if (profile == null) return '';
+    if (profile == null) {
+      debugPrint('⚠️ No user profile found for personalization: $userId');
+      return '';
+    }
+    
+    debugPrint('🎯 Generating personalized context for user: ${profile.name} (ID: $userId)');
     
     final context = StringBuffer();
     
-    // Add user profile context
+    // Add user profile context with explicit name handling
     context.write(profile.generatePersonalizationContext());
     
     // Add mood context if available and user allows it
@@ -116,7 +121,10 @@ class GeminiService {
       context.write(_generateMoodContext(moodData));
     }
     
-    return context.toString();
+    final contextString = context.toString();
+    debugPrint('📝 Personalization context generated (${contextString.length} chars) for ${profile.name}');
+    
+    return contextString;
   }
   
   // Generate mood context from recent mood entries
@@ -366,18 +374,21 @@ Keep responses warm, supportive, and focused on mental wellness. Use personalize
     AgeCategory ageCategory = AgeCategory.unknown;
     
     if (userId != null) {
-      personalizedContext = _generatePersonalizedContext(userId);
-      
-      // Get user's age category for age-appropriate responses
-      final userProfile = _userProfiles[userId];
-      if (userProfile?.birthDate != null) {
-        ageCategory = PrivacySecurityService.getUserAgeCategory(userProfile!.birthDate);
-        debugPrint('🎯 User age category: $ageCategory');
+      final userProfile = getUserProfile(userId);
+      if (userProfile != null) {
+        personalizedContext = _generatePersonalizedContext(userId);
+        debugPrint('📝 Using personalized context for ${userProfile.name} (ID: $userId)');
+        
+        // Get user's age category for age-appropriate responses
+        if (userProfile.birthDate != null) {
+          ageCategory = PrivacySecurityService.getUserAgeCategory(userProfile.birthDate);
+          debugPrint('🎯 User age category: $ageCategory');
+        }
+      } else {
+        debugPrint('⚠️ Warning: No user profile found for personalization (userId: $userId)');
       }
-      
-      if (personalizedContext.isNotEmpty) {
-        debugPrint('🎯 Using personalized context for user: $userId');
-      }
+    } else {
+      debugPrint('💬 No userId provided for personalization');
     }
 
     // Get age-appropriate system prompt
@@ -457,6 +468,9 @@ USER CONTEXT FOR PERSONALIZATION:
 - Communication style preference: ${profile.communicationStyle ?? "supportive"}
 
 ''';
+        debugPrint('🎯 Generating personalized affirmations for ${profile.name}');
+      } else {
+        debugPrint('💬 Generating general affirmations (no personalization available)');
       }
     }
 
@@ -464,7 +478,6 @@ USER CONTEXT FOR PERSONALIZATION:
 Create $count personalized positive affirmations for someone feeling "$mood". 
 
 $personalizedContext
-
 Requirements:
 - Each affirmation should be encouraging and uplifting
 - Use "I am" or "I can" statements

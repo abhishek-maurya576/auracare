@@ -85,9 +85,29 @@ class UserProfileService {
     String? photoUrl,
   }) async {
     try {
+      // Ensure we get the most accurate name from Firebase Auth
+      String finalName = name;
+      final currentUser = _auth.currentUser;
+      
+      if (currentUser != null && currentUser.uid == userId) {
+        // Reload to get latest data
+        await currentUser.reload();
+        final reloadedUser = _auth.currentUser;
+        
+        if (reloadedUser != null && 
+            reloadedUser.displayName != null && 
+            reloadedUser.displayName!.isNotEmpty &&
+            reloadedUser.displayName != 'User') {
+          finalName = reloadedUser.displayName!;
+          debugPrint('Using Firebase Auth display name for new profile: $finalName');
+        } else {
+          debugPrint('Using provided name for new profile: $finalName');
+        }
+      }
+      
       final profile = UserProfile(
         id: userId,
-        name: name,
+        name: finalName,
         email: email,
         age: age,
         photoUrl: photoUrl,
@@ -101,6 +121,7 @@ class UserProfileService {
       );
 
       await saveUserProfile(profile);
+      debugPrint('User profile initialized with name: ${profile.name}');
       return profile;
     } catch (e) {
       debugPrint('Error initializing user profile: $e');
@@ -258,7 +279,82 @@ class UserProfileService {
     final user = _auth.currentUser;
     if (user == null) return null;
     
-    return await loadUserProfile(user.uid);
+    // Ensure Firebase Auth user is up to date
+    await user.reload();
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) return null;
+
+    // Load existing profile
+    UserProfile? profile = await loadUserProfile(currentUser.uid);
+    
+    if (profile == null) {
+      // Create new profile if none exists
+      String userName = 'User';
+      if (currentUser.displayName != null && currentUser.displayName!.isNotEmpty) {
+        userName = currentUser.displayName!;
+        debugPrint('Using Firebase Auth display name for new profile: $userName');
+      } else {
+        // Try to get name from Firestore user document as a fallback
+        try {
+          final userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
+          if (userDoc.exists && userDoc.data() != null && userDoc.data()!['name'] != null) {
+            final firestoreName = userDoc.data()!['name'];
+            if (firestoreName != null && firestoreName != 'User' && firestoreName.isNotEmpty) {
+              userName = firestoreName;
+              debugPrint('Using Firestore user name for new profile: $userName');
+            }
+          }
+        } catch (e) {
+          debugPrint('Error fetching user document: $e');
+        }
+      }
+      
+      profile = await initializeUserProfile(
+        userId: currentUser.uid,
+        name: userName,
+        email: currentUser.email ?? '',
+        photoUrl: currentUser.photoURL,
+      );
+    } else {
+      // Update existing profile name if it's outdated
+      bool needsUpdate = false;
+      String updatedName = profile.name;
+      
+      // Check if Firebase Auth has a better name
+      if (profile.name == 'User' && 
+          currentUser.displayName != null && 
+          currentUser.displayName!.isNotEmpty &&
+          currentUser.displayName != 'User') {
+        updatedName = currentUser.displayName!;
+        needsUpdate = true;
+        debugPrint('Updating profile name from "User" to "${currentUser.displayName}"');
+      }
+      
+      // Check if Firestore users collection has a better name
+      if (profile.name == 'User' && updatedName == 'User') {
+        try {
+          final userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
+          if (userDoc.exists && userDoc.data() != null && userDoc.data()!['name'] != null) {
+            final firestoreName = userDoc.data()!['name'];
+            if (firestoreName != null && firestoreName != 'User' && firestoreName.isNotEmpty) {
+              updatedName = firestoreName;
+              needsUpdate = true;
+              debugPrint('Updating profile name from Firestore: $updatedName');
+            }
+          }
+        } catch (e) {
+          debugPrint('Error fetching user document for name update: $e');
+        }
+      }
+      
+      if (needsUpdate) {
+        final updatedProfile = profile.copyWith(name: updatedName);
+        await saveUserProfile(updatedProfile);
+        profile = updatedProfile;
+      }
+    }
+
+    return profile;
   }
 
   /// Initialize personalization for current user
@@ -267,45 +363,15 @@ class UserProfileService {
       final user = _auth.currentUser;
       if (user == null) return;
 
-      // Load or create user profile
-      UserProfile? profile = await loadUserProfile(user.uid);
+      // Use the improved getCurrentUserProfile method which handles name synchronization
+      final profile = await getCurrentUserProfile();
       
-      if (profile == null) {
-        // Check if we have a name from Firebase Auth
-        String userName = 'User';
-        if (user.displayName != null && user.displayName!.isNotEmpty) {
-          userName = user.displayName!;
-          debugPrint('Using Firebase Auth display name for profile: $userName');
-        } else {
-          // Try to get name from Firestore user document as a fallback
-          try {
-            final userDoc = await _firestore.collection('users').doc(user.uid).get();
-            if (userDoc.exists && userDoc.data() != null && userDoc.data()!['name'] != null) {
-              userName = userDoc.data()!['name'];
-              debugPrint('Using Firestore user name for profile: $userName');
-            }
-          } catch (e) {
-            debugPrint('Error fetching user document: $e');
-          }
-        }
-        
-        profile = await initializeUserProfile(
-          userId: user.uid,
-          name: userName,
-          email: user.email ?? '',
-          photoUrl: user.photoURL,
-        );
-      } else if (profile.name == 'User' && user.displayName != null && user.displayName!.isNotEmpty) {
-        // Update profile if it has default name but Firebase Auth has a real name
-        final updatedProfile = profile.copyWith(name: user.displayName);
-        await saveUserProfile(updatedProfile);
-        profile = updatedProfile;
-        debugPrint('Updated profile name from "User" to "${user.displayName}"');
+      if (profile != null) {
+        debugPrint('Personalization initialized for user: ${profile.name}');
+        // Profile is already saved and Gemini service is updated in getCurrentUserProfile
+      } else {
+        debugPrint('Warning: Could not initialize personalization - profile is null');
       }
-
-      // Load recent mood data and update patterns
-      // This would typically be called from the MoodProvider
-      debugPrint('Personalization initialized for user: ${profile.name}');
     } catch (e) {
       debugPrint('Error initializing personalization: $e');
     }

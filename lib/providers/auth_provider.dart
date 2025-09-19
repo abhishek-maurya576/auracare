@@ -305,21 +305,30 @@ class AuthProvider with ChangeNotifier {
   /// Initialize user profile for personalized AI responses
   Future<void> _initializeUserProfile(UserModel userModel) async {
     try {
-      // Try to load existing profile
-      final existingProfile = await _profileService.loadUserProfile(userModel.id);
+      debugPrint('Initializing user profile for personalization: ${userModel.name}');
       
-      if (existingProfile == null) {
-        // Create new profile for first-time users
-        await _profileService.initializeUserProfile(
-          userId: userModel.id,
-          name: userModel.name,
-          email: userModel.email,
-          age: userModel.age,
-          photoUrl: userModel.photoUrl,
-        );
-        debugPrint('New user profile created for personalization: ${userModel.name}');
+      // Use the UserProfileService's getCurrentUserProfile method which handles
+      // name synchronization between Firebase Auth, Firestore, and UserProfile
+      final profile = await _profileService.getCurrentUserProfile();
+      
+      if (profile != null) {
+        debugPrint('User profile initialized/loaded for personalization: ${profile.name}');
       } else {
-        debugPrint('Existing user profile loaded for personalization: ${existingProfile.name}');
+        debugPrint('Warning: Could not initialize user profile for personalization');
+        
+        // Fallback: try to create a profile manually
+        try {
+          await _profileService.initializeUserProfile(
+            userId: userModel.id,
+            name: userModel.name,
+            email: userModel.email,
+            age: userModel.age,
+            photoUrl: userModel.photoUrl,
+          );
+          debugPrint('Fallback profile creation successful for: ${userModel.name}');
+        } catch (fallbackError) {
+          debugPrint('Fallback profile creation failed: $fallbackError');
+        }
       }
     } catch (e) {
       debugPrint('Error initializing user profile: $e');

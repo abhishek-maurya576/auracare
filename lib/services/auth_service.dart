@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -8,7 +9,11 @@ import '../models/user_model.dart';
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    // Configure with web client ID for proper web support
+    clientId: kIsWeb ? '650633860695-nbm4gru191dfitck2n5vjflknktqp1b5.apps.googleusercontent.com' : null,
+    scopes: ['email', 'profile'],
+  );
   
   static const String _loginStatusKey = 'isLoggedIn';
   static const String _loginMethodKey = 'loginMethod';
@@ -156,23 +161,46 @@ class AuthService {
     try {
       debugPrint('Starting Google Sign-In process...');
       
-      // Trigger the authentication flow
-      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate(
-        scopeHint: [
-          'email',
-          'profile',
-        ],
-      );
+      GoogleSignInAccount? googleUser;
+      
+      if (kIsWeb) {
+        // For web, try silent sign-in first (if user is already signed in)
+        debugPrint('Using web-optimized Google Sign-In flow...');
+        googleUser = await _googleSignIn.signInSilently();
+        
+        // If silent sign-in fails, fall back to regular sign-in
+        if (googleUser == null) {
+          debugPrint('Silent sign-in failed, attempting regular sign-in...');
+          googleUser = await _googleSignIn.signIn();
+        }
+      } else {
+        // For mobile platforms, use regular sign-in
+        debugPrint('Using mobile Google Sign-In flow...');
+        googleUser = await _googleSignIn.signIn();
+      }
+      
+      if (googleUser == null) {
+        debugPrint('Google Sign-In was cancelled by user');
+        return null;
+      }
 
       debugPrint('Google user obtained: ${googleUser.email}');
+      debugPrint('Google user display name: ${googleUser.displayName}');
 
       // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
-
-
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      
+      // Validate that we have the required tokens
+      if (googleAuth.idToken == null) {
+        debugPrint('Warning: No idToken received from Google Sign-In');
+        if (kIsWeb) {
+          throw 'Google Sign-In failed on web: No ID token received. Please try again.';
+        }
+      }
 
       // Create a new credential
       final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
@@ -181,7 +209,28 @@ class AuthService {
       // Sign in to Firebase with the Google credential
       final userCredential = await _auth.signInWithCredential(credential);
       
+      // For new users, ensure display name is set from Google account
+      if (userCredential.user != null) {
+        final firebaseUser = userCredential.user!;
+        
+        // If Firebase Auth doesn't have display name but Google does, update it
+        if ((firebaseUser.displayName == null || firebaseUser.displayName!.isEmpty) && 
+            googleUser.displayName != null && googleUser.displayName!.isNotEmpty) {
+          debugPrint('Updating Firebase Auth display name from Google: ${googleUser.displayName}');
+          await firebaseUser.updateDisplayName(googleUser.displayName);
+          
+          // Also update photo URL if available
+          if (googleUser.photoUrl != null && firebaseUser.photoURL == null) {
+            await firebaseUser.updatePhotoURL(googleUser.photoUrl);
+          }
+          
+          // Reload the user to ensure changes are reflected
+          await firebaseUser.reload();
+        }
+      }
+      
       debugPrint('Google Sign-In successful for user: ${userCredential.user?.uid}');
+      debugPrint('Final display name: ${userCredential.user?.displayName}');
       await setLoginStatus('google');
       return userCredential;
     } on FirebaseAuthException catch (e) {
@@ -189,6 +238,16 @@ class AuthService {
       throw _handleAuthException(e);
     } catch (e) {
       debugPrint('Unexpected error during Google Sign-In: $e');
+      
+      // Provide more specific error messages for common web issues
+      if (e.toString().contains('popup_closed')) {
+        throw 'Google Sign-In was cancelled. Please try again and allow the popup to complete.';
+      } else if (e.toString().contains('access_denied')) {
+        throw 'Google Sign-In access denied. Please check your permissions and try again.';
+      } else if (e.toString().contains('invalid_request')) {
+        throw 'Google Sign-In configuration error. Please contact support.';
+      }
+      
       throw 'Google Sign-In failed: $e';
     }
   }
@@ -241,39 +300,65 @@ class AuthService {
   Future<UserModel?> firebaseUserToUserModel(User? firebaseUser) async {
     if (firebaseUser == null) return null;
     
+    // Ensure we have the latest user data
+    await firebaseUser.reload();
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return null;
+    
     // Try to get existing user data from Firestore
     try {
-      final userData = await getUserData(firebaseUser.uid);
+      final userData = await getUserData(currentUser.uid);
       if (userData != null) {
-        // If the user has a default name in Firestore but now has a real name in Firebase Auth,
-        // update the Firestore record
-        if (userData.name == 'User' && firebaseUser.displayName != null && firebaseUser.displayName != 'User') {
+        // Check if we need to update the name in Firestore from Firebase Auth
+        bool needsUpdate = false;
+        String updatedName = userData.name;
+        
+        if (userData.name == 'User' && 
+            currentUser.displayName != null && 
+            currentUser.displayName!.isNotEmpty &&
+            currentUser.displayName != 'User') {
+          updatedName = currentUser.displayName!;
+          needsUpdate = true;
+          debugPrint('Updating Firestore user name from "User" to "${currentUser.displayName}"');
+        }
+        
+        if (needsUpdate) {
           final updatedUser = userData.copyWith(
-            name: firebaseUser.displayName,
+            name: updatedName,
             lastLoginAt: DateTime.now()
           );
           await saveUserData(updatedUser);
-          debugPrint('Updated user name from "User" to "${firebaseUser.displayName}"');
           return updatedUser;
         }
-        return userData.copyWith(lastLoginAt: DateTime.now());
+        
+        // Just update lastLoginAt if no name update needed
+        final refreshedUser = userData.copyWith(lastLoginAt: DateTime.now());
+        await saveUserData(refreshedUser);
+        return refreshedUser;
       }
     } catch (e) {
-      debugPrint('Error fetching user data: $e');
+      debugPrint('Error fetching existing user data: $e');
     }
     
     // Create new user model if no existing data
     // Ensure we're using the most accurate name available
-    final name = firebaseUser.displayName;
-    if (name == null || name.isEmpty) {
-      debugPrint('Warning: User has no display name in Firebase Auth. Using default "User"');
+    String userName = 'User';
+    
+    // Use Firebase Auth display name as primary source
+    if (currentUser.displayName != null && currentUser.displayName!.isNotEmpty) {
+      userName = currentUser.displayName!;
+      debugPrint('Using Firebase Auth display name for new user: $userName');
+    }
+    
+    if (userName == 'User') {
+      debugPrint('Warning: Could not retrieve user display name. Using default "User"');
     }
     
     final userModel = UserModel(
-      id: firebaseUser.uid,
-      name: (name != null && name.isNotEmpty) ? name : 'User',
-      email: firebaseUser.email ?? '',
-      photoUrl: firebaseUser.photoURL,
+      id: currentUser.uid,
+      name: userName,
+      email: currentUser.email ?? '',
+      photoUrl: currentUser.photoURL,
       createdAt: DateTime.now(),
       lastLoginAt: DateTime.now(),
     );

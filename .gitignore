@@ -64,3 +64,4 @@ android\app\google-services.json.example
 .vscode
 .zencoder
 scripts
+.github
