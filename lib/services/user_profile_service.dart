@@ -72,7 +72,8 @@ class UserProfileService {
         debugPrint('User profile updated atomically for user: $userId');
         debugPrint('Gemini service synchronized with latest profile data');
       } else {
-        debugPrint('Warning: Failed to reload profile after update for user: $userId');
+        debugPrint(
+            'Warning: Failed to reload profile after update for user: $userId');
       }
     } catch (e) {
       debugPrint('Error updating user profile: $e');

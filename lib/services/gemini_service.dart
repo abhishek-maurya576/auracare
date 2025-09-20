@@ -6,6 +6,7 @@ import '../models/user_profile.dart';
 import '../models/mood_entry.dart';
 import '../services/privacy_security_service.dart';
 import '../services/youth_content_service.dart';
+import '../services/content_filter_service.dart';
 
 class GeminiService {
   static const String _baseUrl = ApiKeys.geminiBaseUrl;
@@ -60,12 +61,13 @@ class GeminiService {
     // Validate inputs
     if (sessionId.isEmpty || role.isEmpty || content.isEmpty) {
       debugPrint('⚠️ Warning: Invalid session history entry - skipping');
-      debugPrint('SessionID: "$sessionId", Role: "$role", Content length: ${content.length}');
+      debugPrint(
+          'SessionID: "$sessionId", Role: "$role", Content length: ${content.length}');
       return;
     }
 
     _cleanupOldData(); // Clean up before adding
-    
+
     if (!_sessionHistories.containsKey(sessionId)) {
       _sessionHistories[sessionId] = [];
       debugPrint('📝 Created new session history for: $sessionId');
@@ -81,10 +83,12 @@ class GeminiService {
       final removedCount = _sessionHistories[sessionId]!.length - 20;
       _sessionHistories[sessionId] = _sessionHistories[sessionId]!
           .sublist(_sessionHistories[sessionId]!.length - 20);
-      debugPrint('🧹 Trimmed $removedCount old messages from session: $sessionId');
+      debugPrint(
+          '🧹 Trimmed $removedCount old messages from session: $sessionId');
     }
-    
-    debugPrint('💬 Added message to session $sessionId: $role (${content.length} chars)');
+
+    debugPrint(
+        '💬 Added message to session $sessionId: $role (${content.length} chars)');
   }
 
   // Get session history
@@ -93,10 +97,11 @@ class GeminiService {
       debugPrint('⚠️ Warning: Empty sessionId provided to getSessionHistory');
       return [];
     }
-    
+
     _cleanupOldData(); // Clean up on access
     final history = _sessionHistories[sessionId] ?? [];
-    debugPrint('📖 Retrieved ${history.length} messages for session: $sessionId');
+    debugPrint(
+        '📖 Retrieved ${history.length} messages for session: $sessionId');
     return history;
   }
 
@@ -106,7 +111,7 @@ class GeminiService {
       debugPrint('⚠️ Warning: Empty sessionId provided to clearSessionHistory');
       return;
     }
-    
+
     final messageCount = _sessionHistories[sessionId]?.length ?? 0;
     _sessionHistories.remove(sessionId);
     debugPrint('🗑️ Cleared $messageCount messages from session: $sessionId');
@@ -165,14 +170,14 @@ class GeminiService {
   void _cleanupOldData() {
     final now = DateTime.now();
     final expiredUsers = <String>[];
-    
+
     // Find users with expired data
     _lastAccessTimes.forEach((userId, lastAccess) {
       if (now.difference(lastAccess) > _maxCacheTime) {
         expiredUsers.add(userId);
       }
     });
-    
+
     // Remove expired users
     for (final userId in expiredUsers) {
       _userProfiles.remove(userId);
@@ -180,13 +185,14 @@ class GeminiService {
       _lastAccessTimes.remove(userId);
       debugPrint('Cleaned up expired data for user: $userId');
     }
-    
+
     // If still over limit, remove oldest accessed users
     if (_userProfiles.length > _maxCachedUsers) {
       final sortedByAccess = _lastAccessTimes.entries.toList()
         ..sort((a, b) => a.value.compareTo(b.value));
-      
-      final usersToRemove = sortedByAccess.take(_userProfiles.length - _maxCachedUsers);
+
+      final usersToRemove =
+          sortedByAccess.take(_userProfiles.length - _maxCachedUsers);
       for (final entry in usersToRemove) {
         final userId = entry.key;
         _userProfiles.remove(userId);
@@ -195,9 +201,10 @@ class GeminiService {
         debugPrint('Cleaned up LRU data for user: $userId');
       }
     }
-    
+
     if (expiredUsers.isNotEmpty || _userProfiles.length > _maxCachedUsers) {
-      debugPrint('Memory cleanup completed. Cached users: ${_userProfiles.length}/$_maxCachedUsers');
+      debugPrint(
+          'Memory cleanup completed. Cached users: ${_userProfiles.length}/$_maxCachedUsers');
     }
   }
 
@@ -211,6 +218,61 @@ class GeminiService {
     debugPrint('All cached data cleared. Removed $userCount users from cache.');
   }
 
+  /// Test content filter for debugging - Public method for external testing
+  static QueryValidationResult testContentFilter(String query) {
+    debugPrint('🧪 TESTING: Content filter validation for: "$query"');
+    final result = ContentFilterService.validateQuery(query);
+    ContentFilterService.logFilterDecision(query, result);
+    
+    // Additional test logging
+    debugPrint('📄 TEST RESULT:');
+    debugPrint('   Input: "$query"');
+    debugPrint('   Valid: ${result.isValid}');
+    debugPrint('   Reason: ${result.reason}');
+    debugPrint('   Message: "${result.message}"');
+    if (result.requiresGuidance) {
+      debugPrint('   Guidance: "${result.guidanceMessage}"');
+    }
+    
+    return result;
+  }
+
+  /// Bulk test content filter with common examples
+  static void runContentFilterTests() {
+    debugPrint('🧪 RUNNING CONTENT FILTER TESTS...');
+    
+    final testCases = [
+      // Valid mental health queries
+      'I feel anxious about work',
+      'How can I manage stress?',
+      'I\'m feeling depressed today',
+      'Can you help me with breathing exercises?',
+      'I need support with my relationships',
+      'How are you?',
+      
+      // Invalid/irrelevant queries
+      'What\'s the weather like?',
+      'Tell me about sports scores',
+      'How do I cook pasta?',
+      'What\'s the latest movie?',
+      'Can you help me with programming?',
+      'Tell me about cryptocurrency',
+      
+      // Borderline cases
+      'Hello',
+      'Thank you',
+      'I don\'t know what to say',
+      'Tell me a joke',
+    ];
+    
+    for (final testCase in testCases) {
+      testContentFilter(testCase);
+      debugPrint('---');
+    }
+    
+    debugPrint('✅ CONTENT FILTER TESTS COMPLETED');
+  }
+
   // Generate personalized context based on user profile and mood data
   String _generatePersonalizedContext(String userId) {
     final profile = getUserProfile(userId);
@@ -218,7 +280,8 @@ class GeminiService {
 
     // Comprehensive logging to track personalization status as per API personalization pattern
     if (profile == null) {
-      debugPrint('⚠️ PERSONALIZATION ERROR: No user profile found for personalization');
+      debugPrint(
+          '⚠️ PERSONALIZATION ERROR: No user profile found for personalization');
       debugPrint('⚠️ User ID: $userId');
       debugPrint('⚠️ Available profiles: ${_userProfiles.keys.toList()}');
       debugPrint('⚠️ This will result in non-personalized API responses');
@@ -226,23 +289,28 @@ class GeminiService {
     }
 
     // Verify UserProfile availability and log user name usage
-    debugPrint('✅ PERSONALIZATION SUCCESS: User profile verified and available');
-    debugPrint('🎯 Generating personalized context for user: ${profile.name} (ID: $userId)');
-    debugPrint('📊 Profile completeness: ${_calculateProfileCompleteness(profile)}%');
+    debugPrint(
+        '✅ PERSONALIZATION SUCCESS: User profile verified and available');
+    debugPrint(
+        '🎯 Generating personalized context for user: ${profile.name} (ID: $userId)');
+    debugPrint(
+        '📊 Profile completeness: ${_calculateProfileCompleteness(profile)}%');
     debugPrint('🔒 Personalization enabled: ${profile.enablePersonalization}');
     debugPrint('💭 Emotional state sharing: ${profile.shareEmotionalState}');
-    
+
     final context = StringBuffer();
 
     // Add user profile context with explicit name handling
     final profileContext = profile.generatePersonalizationContext();
     context.write(profileContext);
-    
+
     // Log user name usage for tracking
     if (profileContext.contains('Name: ${profile.name}')) {
-      debugPrint('👤 User name successfully included in personalization context: ${profile.name}');
+      debugPrint(
+          '👤 User name successfully included in personalization context: ${profile.name}');
     } else {
-      debugPrint('⚠️ Warning: User name may not be properly included in context');
+      debugPrint(
+          '⚠️ Warning: User name may not be properly included in context');
     }
 
     // Add mood context if available and user allows it
@@ -251,9 +319,11 @@ class GeminiService {
         moodData.isNotEmpty) {
       final moodContext = _generateMoodContext(moodData);
       context.write(moodContext);
-      debugPrint('📈 Mood context added: ${moodData.length} entries from last 7 days');
+      debugPrint(
+          '📈 Mood context added: ${moodData.length} entries from last 7 days');
     } else {
-      debugPrint('📊 No mood context added - sharing disabled or no data available');
+      debugPrint(
+          '📊 No mood context added - sharing disabled or no data available');
     }
 
     final contextString = context.toString();
@@ -268,9 +338,10 @@ class GeminiService {
   double _calculateProfileCompleteness(UserProfile profile) {
     int completedFields = 0;
     int totalFields = 10;
-    
+
     if (profile.mentalHealthGoals?.isNotEmpty == true) completedFields++;
-    if (profile.preferredCopingStrategies?.isNotEmpty == true) completedFields++;
+    if (profile.preferredCopingStrategies?.isNotEmpty == true)
+      completedFields++;
     if (profile.communicationStyle != null) completedFields++;
     if (profile.triggers?.isNotEmpty == true) completedFields++;
     if (profile.strengths?.isNotEmpty == true) completedFields++;
@@ -279,7 +350,7 @@ class GeminiService {
     if (profile.age != null) completedFields++;
     if (profile.timezone != null) completedFields++;
     if (profile.language != null) completedFields++;
-    
+
     return (completedFields / totalFields) * 100;
   }
 
@@ -445,21 +516,43 @@ class GeminiService {
     String? additionalContext,
     String? userId,
   }) async {
-    // Generate personalized context if userId is provided and valid
+    // Step 1: Content filtering - Following API personalization pattern with logging
+    debugPrint('🔍 CONTENT FILTER: Validating mood analysis request');
+    final validationResult = ContentFilterService.validateQuery(moodText);
+    ContentFilterService.logFilterDecision(moodText, validationResult);
+    
+    if (!validationResult.isValid) {
+      debugPrint('❌ CONTENT FILTER: Mood analysis request rejected');
+      return {
+        'sentiment': 'neutral',
+        'emotionalState': 'Request not processed',
+        'supportiveMessage': validationResult.message,
+        'suggestedActions': ['Share your feelings', 'Talk about your emotions', 'Describe your mood'],
+        'urgencyLevel': 'low',
+        'keywords': ['guidance'],
+      };
+    }
+    
+    debugPrint('✅ CONTENT FILTER: Mood analysis request approved');
+
+    // Step 2: Generate personalized context if userId is provided and valid
     String personalizedContext = '';
     if (userId != null) {
       // Validate user exists before generating context
       final userProfile = getUserProfile(userId);
       if (userProfile != null) {
         personalizedContext = _generatePersonalizedContext(userId);
-        debugPrint('🎯 Using validated personalized context for mood analysis: ${userProfile.name}');
+        debugPrint(
+            '🎯 Using validated personalized context for mood analysis: ${userProfile.name}');
       } else {
-        debugPrint('⚠️ Warning: Invalid userId provided for mood analysis: $userId');
+        debugPrint(
+            '⚠️ Warning: Invalid userId provided for mood analysis: $userId');
         debugPrint('📋 Available users: ${_userProfiles.keys.toList()}');
         debugPrint('🔄 Falling back to non-personalized analysis');
       }
     } else {
-      debugPrint('📋 No userId provided - using non-personalized mood analysis');
+      debugPrint(
+          '📋 No userId provided - using non-personalized mood analysis');
     }
 
     final prompt = '''
@@ -527,6 +620,30 @@ Keep responses warm, supportive, and focused on mental wellness. Use personalize
     String? sessionId,
     String? userId,
   }) async {
+    // Step 1: Content filtering - Following API personalization pattern
+    debugPrint('🔍 CONTENT FILTER: Validating chat message');
+    final validationResult = ContentFilterService.validateQuery(userMessage);
+    ContentFilterService.logFilterDecision(userMessage, validationResult);
+    
+    if (!validationResult.isValid) {
+      debugPrint('❌ CONTENT FILTER: Chat message rejected');
+      // Add rejection message to session history if sessionId provided
+      if (sessionId != null) {
+        addToSessionHistory(sessionId, 'User', userMessage);
+        addToSessionHistory(sessionId, 'Aura', validationResult.message);
+      }
+      return validationResult.message;
+    }
+    
+    debugPrint('✅ CONTENT FILTER: Chat message approved');
+    
+    // Add guidance message if needed
+    String guidancePrefix = '';
+    if (validationResult.requiresGuidance) {
+      guidancePrefix = '${validationResult.guidanceMessage}\n\n';
+      debugPrint('🧘 GUIDANCE: Adding mental health guidance to response');
+    }
+
     // Use session history if sessionId is provided
     List<Map<String, String>> conversationHistory = [];
 
@@ -620,22 +737,30 @@ Respond as Aura with empathy and support, taking into account ALL previous conve
     final filteredResponse =
         YouthContentService.filterContentForAge(response, ageCategory);
 
+    // Add guidance prefix if needed
+    final finalResponse = guidancePrefix.isNotEmpty 
+        ? '$guidancePrefix$filteredResponse' 
+        : filteredResponse;
+
     // Add AI response to session history if sessionId is provided
     if (sessionId != null) {
-      addToSessionHistory(sessionId, 'Aura', filteredResponse);
+      addToSessionHistory(sessionId, 'Aura', finalResponse);
     }
 
-    return filteredResponse;
+    return finalResponse;
   }
 
   // Generate daily wellness tips
   Future<String> generateDailyTip() async {
+    debugPrint('💡 CONTENT FILTER: Generating mental health wellness tip');
+    
     final prompt = '''
 Generate a brief, actionable mental wellness tip for today. The tip should be:
 - Practical and easy to implement
 - Focused on mental health and emotional wellbeing
 - Positive and encouraging
 - 30-50 words maximum
+- ONLY about mental health, wellness, mindfulness, or emotional support
 
 Examples of good tips:
 - Mindfulness exercises
@@ -645,10 +770,12 @@ Examples of good tips:
 - Stress management
 - Positive thinking strategies
 
-Generate one unique tip:
+Generate one unique mental health tip:
 ''';
 
-    return await generateContent(prompt);
+    final tip = await generateContent(prompt);
+    debugPrint('✅ CONTENT FILTER: Mental health tip generated successfully');
+    return tip;
   }
 
   // Generate personalized affirmations
@@ -657,6 +784,21 @@ Generate one unique tip:
     int count = 3,
     String? userId,
   }) async {
+    // Content filtering for mood input
+    debugPrint('🔍 CONTENT FILTER: Validating affirmations request for mood: $mood');
+    final validationResult = ContentFilterService.validateQuery(mood);
+    
+    if (!validationResult.isValid) {
+      debugPrint('❌ CONTENT FILTER: Affirmations request rejected');
+      return [
+        'I am worthy of love and support',
+        'I can seek help when I need it',
+        'I deserve to feel better and find peace',
+      ];
+    }
+    
+    debugPrint('✅ CONTENT FILTER: Affirmations request approved');
+
     // Generate personalized context if userId is provided and valid
     String personalizedContext = '';
     if (userId != null) {
@@ -670,7 +812,8 @@ USER CONTEXT FOR PERSONALIZATION:
 - Communication style preference: ${profile.communicationStyle ?? "supportive"}
 
 ''';
-        debugPrint('🎯 Generating personalized affirmations for ${profile.name}');
+        debugPrint(
+            '🎯 Generating personalized affirmations for ${profile.name}');
       } else if (profile == null) {
         debugPrint('⚠️ Warning: Invalid userId for affirmations: $userId');
         debugPrint('📋 Available users: ${_userProfiles.keys.toList()}');
@@ -680,7 +823,8 @@ USER CONTEXT FOR PERSONALIZATION:
         debugPrint('🔄 Generating general affirmations');
       }
     } else {
-      debugPrint('📋 No userId provided for affirmations - generating general affirmations');
+      debugPrint(
+          '📋 No userId provided for affirmations - generating general affirmations');
     }
 
     final prompt = '''
@@ -817,6 +961,23 @@ Suggested quick replies:
   Future<String> sendMessageToAI(String userMessage,
       {List<Map<String, dynamic>>? messageHistory, String? sessionId}) async {
     try {
+      // Content filtering first
+      debugPrint('🔍 CONTENT FILTER: Validating sendMessageToAI request');
+      final validationResult = ContentFilterService.validateQuery(userMessage);
+      ContentFilterService.logFilterDecision(userMessage, validationResult);
+      
+      if (!validationResult.isValid) {
+        debugPrint('❌ CONTENT FILTER: sendMessageToAI request rejected');
+        // Add to session history if sessionId provided
+        if (sessionId != null) {
+          addToSessionHistory(sessionId, 'User', userMessage);
+          addToSessionHistory(sessionId, 'Aura', validationResult.message);
+        }
+        return validationResult.message;
+      }
+      
+      debugPrint('✅ CONTENT FILTER: sendMessageToAI request approved');
+      
       final stressLevel = detectStressLevel(userMessage);
 
       // Use session-based history for better memory
@@ -834,6 +995,12 @@ Suggested quick replies:
           for (final message in conversationHistory) {
             historyContext += '${message['role']}: ${message['content']}\n';
           }
+        }
+
+        // Add guidance if needed
+        String guidancePrefix = '';
+        if (validationResult.requiresGuidance) {
+          guidancePrefix = '${validationResult.guidanceMessage}\n\n';
         }
 
         final prompt = '''
@@ -859,26 +1026,30 @@ Respond as Aura:
 
         final aiReply = await generateContent(prompt);
 
+        // Add guidance and format final response
+        String finalReply = guidancePrefix.isNotEmpty 
+            ? '$guidancePrefix$aiReply' 
+            : aiReply;
+
         // Add AI response to session history
-        addToSessionHistory(sessionId, 'Aura', aiReply);
+        addToSessionHistory(sessionId, 'Aura', finalReply);
 
         // Add crisis resources for high stress levels
-        String enhancedReply = aiReply;
         if (stressLevel >= 7) {
-          enhancedReply +=
+          finalReply +=
               '\n\n💡 I sense you\'re under high stress. Please take a walk outside or visit a nearby park/garden. You\'re not alone, and talking with someone close can help.';
         }
 
         if (stressLevel >= 8) {
-          enhancedReply +=
+          finalReply +=
               '\n\n🆘 If you\'re in crisis, please reach out to:\n• National Suicide Prevention Lifeline: 988\n• Crisis Text Line: Text HOME to 741741\n• Your local emergency services: 911';
         }
 
-        return enhancedReply;
+        return finalReply;
       } else {
-        // Fallback to old method if no sessionId
+        // Fallback to filtered generateChatResponse method
         return await generateChatResponse(userMessage,
-            sessionId: sessionId); // Pass sessionId for history management
+            sessionId: sessionId);
       }
     } catch (e) {
       debugPrint('AI Error: $e');
