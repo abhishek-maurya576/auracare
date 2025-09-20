@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -11,10 +10,12 @@ class AuthService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     // Configure with web client ID for proper web support
-    clientId: kIsWeb ? '650633860695-nbm4gru191dfitck2n5vjflknktqp1b5.apps.googleusercontent.com' : null,
+    clientId: kIsWeb
+        ? '650633860695-nbm4gru191dfitck2n5vjflknktqp1b5.apps.googleusercontent.com'
+        : null,
     scopes: ['email', 'profile'],
   );
-  
+
   static const String _loginStatusKey = 'isLoggedIn';
   static const String _loginMethodKey = 'loginMethod';
   static const String _lastLoginKey = 'lastLoginTime';
@@ -31,13 +32,13 @@ class AuthService {
       final prefs = await SharedPreferences.getInstance();
       final isLoggedIn = prefs.getBool(_loginStatusKey) ?? false;
       final currentUser = _auth.currentUser;
-      
+
       // Verify Firebase auth state matches stored preference
       if (isLoggedIn && currentUser == null) {
         await clearLoginStatus(); // Clean up inconsistent state
         return false;
       }
-      
+
       return isLoggedIn && currentUser != null;
     } catch (e) {
       debugPrint('Error checking login status: $e');
@@ -97,10 +98,10 @@ class AuthService {
     try {
       final lastLogin = await getLastLoginTime();
       if (lastLogin == null) return 'Unknown';
-      
+
       final now = DateTime.now();
       final difference = now.difference(lastLogin);
-      
+
       if (difference.inDays > 0) {
         return '${difference.inDays} day${difference.inDays == 1 ? '' : 's'}';
       } else if (difference.inHours > 0) {
@@ -117,7 +118,8 @@ class AuthService {
   }
 
   // Sign in with email and password
-  Future<UserCredential?> signInWithEmailPassword(String email, String password) async {
+  Future<UserCredential?> signInWithEmailPassword(
+      String email, String password) async {
     try {
       debugPrint('Attempting to sign in with email: $email');
       final credential = await _auth.signInWithEmailAndPassword(
@@ -137,7 +139,8 @@ class AuthService {
   }
 
   // Create user with email and password
-  Future<UserCredential?> createUserWithEmailPassword(String email, String password) async {
+  Future<UserCredential?> createUserWithEmailPassword(
+      String email, String password) async {
     try {
       debugPrint('Attempting to create user with email: $email');
       final credential = await _auth.createUserWithEmailAndPassword(
@@ -148,7 +151,8 @@ class AuthService {
       await setLoginStatus('email');
       return credential;
     } on FirebaseAuthException catch (e) {
-      debugPrint('FirebaseAuthException during signup: ${e.code} - ${e.message}');
+      debugPrint(
+          'FirebaseAuthException during signup: ${e.code} - ${e.message}');
       throw _handleAuthException(e);
     } catch (e) {
       debugPrint('Unexpected error during signup: $e');
@@ -160,14 +164,14 @@ class AuthService {
   Future<UserCredential?> signInWithGoogle() async {
     try {
       debugPrint('Starting Google Sign-In process...');
-      
+
       GoogleSignInAccount? googleUser;
-      
+
       if (kIsWeb) {
         // For web, try silent sign-in first (if user is already signed in)
         debugPrint('Using web-optimized Google Sign-In flow...');
         googleUser = await _googleSignIn.signInSilently();
-        
+
         // If silent sign-in fails, fall back to regular sign-in
         if (googleUser == null) {
           debugPrint('Silent sign-in failed, attempting regular sign-in...');
@@ -178,7 +182,7 @@ class AuthService {
         debugPrint('Using mobile Google Sign-In flow...');
         googleUser = await _googleSignIn.signIn();
       }
-      
+
       if (googleUser == null) {
         debugPrint('Google Sign-In was cancelled by user');
         return null;
@@ -188,8 +192,9 @@ class AuthService {
       debugPrint('Google user display name: ${googleUser.displayName}');
 
       // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
       // Validate that we have the required tokens
       if (googleAuth.idToken == null) {
         debugPrint('Warning: No idToken received from Google Sign-In');
@@ -208,37 +213,42 @@ class AuthService {
 
       // Sign in to Firebase with the Google credential
       final userCredential = await _auth.signInWithCredential(credential);
-      
+
       // For new users, ensure display name is set from Google account
       if (userCredential.user != null) {
         final firebaseUser = userCredential.user!;
-        
+
         // If Firebase Auth doesn't have display name but Google does, update it
-        if ((firebaseUser.displayName == null || firebaseUser.displayName!.isEmpty) && 
-            googleUser.displayName != null && googleUser.displayName!.isNotEmpty) {
-          debugPrint('Updating Firebase Auth display name from Google: ${googleUser.displayName}');
+        if ((firebaseUser.displayName == null ||
+                firebaseUser.displayName!.isEmpty) &&
+            googleUser.displayName != null &&
+            googleUser.displayName!.isNotEmpty) {
+          debugPrint(
+              'Updating Firebase Auth display name from Google: ${googleUser.displayName}');
           await firebaseUser.updateDisplayName(googleUser.displayName);
-          
+
           // Also update photo URL if available
           if (googleUser.photoUrl != null && firebaseUser.photoURL == null) {
             await firebaseUser.updatePhotoURL(googleUser.photoUrl);
           }
-          
+
           // Reload the user to ensure changes are reflected
           await firebaseUser.reload();
         }
       }
-      
-      debugPrint('Google Sign-In successful for user: ${userCredential.user?.uid}');
+
+      debugPrint(
+          'Google Sign-In successful for user: ${userCredential.user?.uid}');
       debugPrint('Final display name: ${userCredential.user?.displayName}');
       await setLoginStatus('google');
       return userCredential;
     } on FirebaseAuthException catch (e) {
-      debugPrint('FirebaseAuthException during Google Sign-In: ${e.code} - ${e.message}');
+      debugPrint(
+          'FirebaseAuthException during Google Sign-In: ${e.code} - ${e.message}');
       throw _handleAuthException(e);
     } catch (e) {
       debugPrint('Unexpected error during Google Sign-In: $e');
-      
+
       // Provide more specific error messages for common web issues
       if (e.toString().contains('popup_closed')) {
         throw 'Google Sign-In was cancelled. Please try again and allow the popup to complete.';
@@ -247,7 +257,7 @@ class AuthService {
       } else if (e.toString().contains('invalid_request')) {
         throw 'Google Sign-In configuration error. Please contact support.';
       }
-      
+
       throw 'Google Sign-In failed: $e';
     }
   }
@@ -268,7 +278,10 @@ class AuthService {
   // Save user data to Firestore
   Future<void> saveUserData(UserModel userModel) async {
     try {
-      await _firestore.collection('users').doc(userModel.id).set(userModel.toJson());
+      await _firestore
+          .collection('users')
+          .doc(userModel.id)
+          .set(userModel.toJson());
     } catch (e) {
       throw 'Failed to save user data: $e';
     }
@@ -299,12 +312,12 @@ class AuthService {
   // Convert Firebase User to UserModel
   Future<UserModel?> firebaseUserToUserModel(User? firebaseUser) async {
     if (firebaseUser == null) return null;
-    
+
     // Ensure we have the latest user data
     await firebaseUser.reload();
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return null;
-    
+
     // Try to get existing user data from Firestore
     try {
       final userData = await getUserData(currentUser.uid);
@@ -312,25 +325,24 @@ class AuthService {
         // Check if we need to update the name in Firestore from Firebase Auth
         bool needsUpdate = false;
         String updatedName = userData.name;
-        
-        if (userData.name == 'User' && 
-            currentUser.displayName != null && 
+
+        if (userData.name == 'User' &&
+            currentUser.displayName != null &&
             currentUser.displayName!.isNotEmpty &&
             currentUser.displayName != 'User') {
           updatedName = currentUser.displayName!;
           needsUpdate = true;
-          debugPrint('Updating Firestore user name from "User" to "${currentUser.displayName}"');
+          debugPrint(
+              'Updating Firestore user name from "User" to "${currentUser.displayName}"');
         }
-        
+
         if (needsUpdate) {
-          final updatedUser = userData.copyWith(
-            name: updatedName,
-            lastLoginAt: DateTime.now()
-          );
+          final updatedUser =
+              userData.copyWith(name: updatedName, lastLoginAt: DateTime.now());
           await saveUserData(updatedUser);
           return updatedUser;
         }
-        
+
         // Just update lastLoginAt if no name update needed
         final refreshedUser = userData.copyWith(lastLoginAt: DateTime.now());
         await saveUserData(refreshedUser);
@@ -339,21 +351,23 @@ class AuthService {
     } catch (e) {
       debugPrint('Error fetching existing user data: $e');
     }
-    
+
     // Create new user model if no existing data
     // Ensure we're using the most accurate name available
     String userName = 'User';
-    
+
     // Use Firebase Auth display name as primary source
-    if (currentUser.displayName != null && currentUser.displayName!.isNotEmpty) {
+    if (currentUser.displayName != null &&
+        currentUser.displayName!.isNotEmpty) {
       userName = currentUser.displayName!;
       debugPrint('Using Firebase Auth display name for new user: $userName');
     }
-    
+
     if (userName == 'User') {
-      debugPrint('Warning: Could not retrieve user display name. Using default "User"');
+      debugPrint(
+          'Warning: Could not retrieve user display name. Using default "User"');
     }
-    
+
     final userModel = UserModel(
       id: currentUser.uid,
       name: userName,
@@ -362,7 +376,7 @@ class AuthService {
       createdAt: DateTime.now(),
       lastLoginAt: DateTime.now(),
     );
-    
+
     // Save this new user model to Firestore
     try {
       await saveUserData(userModel);
@@ -370,7 +384,7 @@ class AuthService {
     } catch (e) {
       debugPrint('Error saving new user model: $e');
     }
-    
+
     return userModel;
   }
 
@@ -419,7 +433,8 @@ class AuthService {
   }
 
   // Update user profile
-  Future<void> updateUserProfile({String? displayName, String? photoURL}) async {
+  Future<void> updateUserProfile(
+      {String? displayName, String? photoURL}) async {
     try {
       final user = _auth.currentUser;
       if (user != null) {
@@ -427,7 +442,7 @@ class AuthService {
           debugPrint('Updating Firebase Auth displayName to: $displayName');
           await user.updateDisplayName(displayName);
         }
-        
+
         if (photoURL != null) {
           // Only update Firebase Auth photoURL if it's a network URL
           // For asset paths, we'll just store them in Firestore
@@ -435,7 +450,8 @@ class AuthService {
             debugPrint('Updating Firebase Auth photoURL to: $photoURL');
             await user.updatePhotoURL(photoURL);
           } else {
-            debugPrint('Skipping Firebase Auth photoURL update for asset path: $photoURL');
+            debugPrint(
+                'Skipping Firebase Auth photoURL update for asset path: $photoURL');
           }
         }
       }
@@ -445,4 +461,3 @@ class AuthService {
     }
   }
 }
-

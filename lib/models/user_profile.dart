@@ -1,5 +1,8 @@
 
 /// Enhanced user profile model for personalized AI interactions
+
+import 'package:flutter/foundation.dart';
+
 class UserProfile {
   final String id;
   final String name;
@@ -83,51 +86,54 @@ class UserProfile {
       name: json['name'] as String,
       email: json['email'] as String,
       age: json['age'] as int?,
+      birthDate: json['birthDate'] != null 
+          ? DateTime.parse(json['birthDate'] as String)
+          : null,
       photoUrl: json['photoUrl'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
       lastLoginAt: DateTime.parse(json['lastLoginAt'] as String),
       preferences: json['preferences'] as Map<String, dynamic>?,
-      interests: json['interests'] != null 
-          ? List<String>.from(json['interests'] as List)
-          : null,
-      mentalHealthGoals: json['mentalHealthGoals'] != null 
-          ? List<String>.from(json['mentalHealthGoals'] as List)
-          : null,
-      preferredCopingStrategies: json['preferredCopingStrategies'] != null 
-          ? List<String>.from(json['preferredCopingStrategies'] as List)
-          : null,
+      interests: _safeListFromJson(json['interests']),
+      mentalHealthGoals: _safeListFromJson(json['mentalHealthGoals']),
+      mentalHealthChallenges: _safeListFromJson(json['mentalHealthChallenges']),
+      preferredCopingStrategies: _safeListFromJson(json['preferredCopingStrategies']),
+      copingStrategies: _safeListFromJson(json['copingStrategies']),
       communicationStyle: json['communicationStyle'] as String?,
-      triggers: json['triggers'] != null 
-          ? List<String>.from(json['triggers'] as List)
-          : null,
-      strengths: json['strengths'] != null 
-          ? List<String>.from(json['strengths'] as List)
-          : null,
+      triggers: _safeListFromJson(json['triggers']),
+      strengths: _safeListFromJson(json['strengths']),
       personalityType: json['personalityType'] as String?,
       therapyHistory: json['therapyHistory'] as Map<String, dynamic>?,
-      supportNetwork: json['supportNetwork'] != null 
-          ? List<String>.from(json['supportNetwork'] as List)
-          : null,
+      supportNetwork: _safeListFromJson(json['supportNetwork']),
       timezone: json['timezone'] as String?,
       language: json['language'] as String?,
       moodPatterns: json['moodPatterns'] as Map<String, dynamic>?,
       stressPatterns: json['stressPatterns'] as Map<String, dynamic>?,
-      successfulInterventions: json['successfulInterventions'] != null 
-          ? List<String>.from(json['successfulInterventions'] as List)
-          : null,
+      successfulInterventions: _safeListFromJson(json['successfulInterventions']),
       crisisProtocol: json['crisisProtocol'] as Map<String, dynamic>?,
       enablePersonalization: json['enablePersonalization'] as bool? ?? true,
       shareEmotionalState: json['shareEmotionalState'] as bool? ?? true,
       allowMoodTracking: json['allowMoodTracking'] as bool? ?? true,
       enableProactiveSupport: json['enableProactiveSupport'] as bool? ?? false,
       conversationDepth: json['conversationDepth'] as int? ?? 3,
-      topicsToAvoid: json['topicsToAvoid'] != null 
-          ? List<String>.from(json['topicsToAvoid'] as List)
-          : null,
-      preferredTopics: json['preferredTopics'] != null 
-          ? List<String>.from(json['preferredTopics'] as List)
-          : null,
+      topicsToAvoid: _safeListFromJson(json['topicsToAvoid']),
+      preferredTopics: _safeListFromJson(json['preferredTopics']),
     );
+  }
+
+  /// Safely convert JSON list to List<String> with type validation
+  static List<String>? _safeListFromJson(dynamic jsonList) {
+    if (jsonList == null) return null;
+    if (jsonList is! List) return null;
+    
+    try {
+      return jsonList
+          .where((item) => item is String)
+          .cast<String>()
+          .toList();
+    } catch (e) {
+      debugPrint('Warning: Failed to parse list from JSON: $e');
+      return null;
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -136,13 +142,16 @@ class UserProfile {
       'name': name,
       'email': email,
       'age': age,
+      'birthDate': birthDate?.toIso8601String(),
       'photoUrl': photoUrl,
       'createdAt': createdAt.toIso8601String(),
       'lastLoginAt': lastLoginAt.toIso8601String(),
       'preferences': preferences,
       'interests': interests,
       'mentalHealthGoals': mentalHealthGoals,
+      'mentalHealthChallenges': mentalHealthChallenges,
       'preferredCopingStrategies': preferredCopingStrategies,
+      'copingStrategies': copingStrategies,
       'communicationStyle': communicationStyle,
       'triggers': triggers,
       'strengths': strengths,
@@ -170,13 +179,16 @@ class UserProfile {
     String? name,
     String? email,
     int? age,
+    DateTime? birthDate,
     String? photoUrl,
     DateTime? createdAt,
     DateTime? lastLoginAt,
     Map<String, dynamic>? preferences,
     List<String>? interests,
     List<String>? mentalHealthGoals,
+    List<String>? mentalHealthChallenges,
     List<String>? preferredCopingStrategies,
+    List<String>? copingStrategies,
     String? communicationStyle,
     List<String>? triggers,
     List<String>? strengths,
@@ -202,13 +214,16 @@ class UserProfile {
       name: name ?? this.name,
       email: email ?? this.email,
       age: age ?? this.age,
+      birthDate: birthDate ?? this.birthDate,
       photoUrl: photoUrl ?? this.photoUrl,
       createdAt: createdAt ?? this.createdAt,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
       preferences: preferences ?? this.preferences,
       interests: interests ?? this.interests,
       mentalHealthGoals: mentalHealthGoals ?? this.mentalHealthGoals,
+      mentalHealthChallenges: mentalHealthChallenges ?? this.mentalHealthChallenges,
       preferredCopingStrategies: preferredCopingStrategies ?? this.preferredCopingStrategies,
+      copingStrategies: copingStrategies ?? this.copingStrategies,
       communicationStyle: communicationStyle ?? this.communicationStyle,
       triggers: triggers ?? this.triggers,
       strengths: strengths ?? this.strengths,

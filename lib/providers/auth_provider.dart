@@ -18,7 +18,7 @@ enum AuthState {
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   final UserProfileService _profileService = UserProfileService();
-  
+
   AuthState _state = AuthState.initial;
   UserModel? _user;
   String? _errorMessage;
@@ -27,7 +27,8 @@ class AuthProvider with ChangeNotifier {
   AuthState get state => _state;
   UserModel? get user => _user;
   String? get errorMessage => _errorMessage;
-  bool get isAuthenticated => _state == AuthState.authenticated && _user != null;
+  bool get isAuthenticated =>
+      _state == AuthState.authenticated && _user != null;
 
   AuthProvider() {
     _initializeAuth();
@@ -41,11 +42,12 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> _initializeAuth() async {
     _setState(AuthState.loading);
-    
+
     try {
       // Listen to Firebase auth state changes
-      _authStateSubscription = _authService.authStateChanges.listen(_onAuthStateChanged);
-      
+      _authStateSubscription =
+          _authService.authStateChanges.listen(_onAuthStateChanged);
+
       // Wait for the first authentication state change to determine initial status
       final currentUser = await _authService.authStateChanges.first;
       if (currentUser != null) {
@@ -68,18 +70,20 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> _handleUserSignIn(User firebaseUser) async {
     try {
-      final userModel = await _authService.firebaseUserToUserModel(firebaseUser);
+      final userModel =
+          await _authService.firebaseUserToUserModel(firebaseUser);
       if (userModel != null) {
         _user = userModel;
         await _saveUserData(userModel);
-        
+
         // Initialize or load user profile for personalization
         await _initializeUserProfile(userModel);
-        
+
         _setState(AuthState.authenticated);
-        
+
         // Notify other providers that user is authenticated
-        debugPrint('User authenticated successfully with personalization: ${userModel.name}');
+        debugPrint(
+            'User authenticated successfully with personalization: ${userModel.name}');
       }
     } catch (e) {
       _setError('Failed to process user sign-in: $e');
@@ -91,7 +95,7 @@ class AuthProvider with ChangeNotifier {
     if (_user != null) {
       _profileService.clearUserDataFromGemini(_user!.id);
     }
-    
+
     _user = null;
     _clearUserData();
     _setState(AuthState.unauthenticated);
@@ -99,10 +103,10 @@ class AuthProvider with ChangeNotifier {
 
   Future<bool> signInWithGoogle() async {
     _setState(AuthState.loading);
-    
+
     try {
       final userCredential = await _authService.signInWithGoogle();
-      
+
       if (userCredential == null) {
         _setState(AuthState.unauthenticated);
         return false;
@@ -118,15 +122,16 @@ class AuthProvider with ChangeNotifier {
 
   Future<bool> signInWithEmailPassword(String email, String password) async {
     _setState(AuthState.loading);
-    
+
     try {
-      final userCredential = await _authService.signInWithEmailPassword(email, password);
-      
+      final userCredential =
+          await _authService.signInWithEmailPassword(email, password);
+
       if (userCredential != null) {
         // The auth state listener will handle the rest
         return true;
       }
-      
+
       _setState(AuthState.unauthenticated);
       return false;
     } catch (e) {
@@ -142,27 +147,31 @@ class AuthProvider with ChangeNotifier {
     int? age,
   }) async {
     _setState(AuthState.loading);
-    
+
     try {
-      final userCredential = await _authService.createUserWithEmailPassword(email, password);
-      
+      final userCredential =
+          await _authService.createUserWithEmailPassword(email, password);
+
       if (userCredential != null && userCredential.user != null) {
         debugPrint('User created successfully, setting display name: $name');
-        
+
         // Update the display name first
         await _authService.updateUserProfile(displayName: name);
-        
+
         // Wait a moment to ensure Firebase Auth updates are processed
         await Future.delayed(const Duration(milliseconds: 500));
-        
+
         // Verify the display name was set correctly
         final currentUser = FirebaseAuth.instance.currentUser;
-        if (currentUser != null && (currentUser.displayName == null || currentUser.displayName != name)) {
-          debugPrint('Warning: Display name not set correctly. Firebase: ${currentUser.displayName}, Expected: $name');
+        if (currentUser != null &&
+            (currentUser.displayName == null ||
+                currentUser.displayName != name)) {
+          debugPrint(
+              'Warning: Display name not set correctly. Firebase: ${currentUser.displayName}, Expected: $name');
           // Try updating again
           await _authService.updateUserProfile(displayName: name);
         }
-        
+
         // Create user document in Firestore with the provided name
         final userModel = UserModel(
           id: userCredential.user!.uid,
@@ -172,15 +181,15 @@ class AuthProvider with ChangeNotifier {
           createdAt: DateTime.now(),
           lastLoginAt: DateTime.now(),
         );
-        
+
         // Save to Firestore
         await _authService.saveUserData(userModel);
         debugPrint('User data saved to Firestore with name: $name');
-        
+
         // The auth state listener will handle the rest
         return true;
       }
-      
+
       _setState(AuthState.unauthenticated);
       return false;
     } catch (e) {
@@ -191,7 +200,7 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> signOut() async {
     _setState(AuthState.loading);
-    
+
     try {
       await _authService.signOut();
       // The auth state listener will handle the rest
@@ -208,10 +217,10 @@ class AuthProvider with ChangeNotifier {
     List<String>? interests,
   }) async {
     if (_user == null) return;
-    
+
     try {
       debugPrint('Updating user profile with photoUrl: $photoUrl');
-      
+
       final updatedUser = _user!.copyWith(
         name: name,
         age: age,
@@ -219,23 +228,25 @@ class AuthProvider with ChangeNotifier {
         preferences: preferences,
         interests: interests,
       );
-      
+
       // Update in Firestore
       await _authService.saveUserData(updatedUser);
-      
+
       // Update Firebase Auth profile if name or photo changed
       // Only update Firebase Auth photoURL if it's a network URL
       // For asset paths, we'll just store them in Firestore
       if (name != null || (photoUrl != null && photoUrl.startsWith('http'))) {
         await _authService.updateUserProfile(
-          displayName: name, 
-          photoURL: photoUrl != null && photoUrl.startsWith('http') ? photoUrl : null
-        );
+            displayName: name,
+            photoURL: photoUrl != null && photoUrl.startsWith('http')
+                ? photoUrl
+                : null);
       }
-      
+
       _user = updatedUser;
       await _saveUserData(updatedUser);
-      debugPrint('User profile updated successfully with photoUrl: ${updatedUser.photoUrl}');
+      debugPrint(
+          'User profile updated successfully with photoUrl: ${updatedUser.photoUrl}');
       notifyListeners();
     } catch (e) {
       _setError('Failed to update profile: $e');
@@ -249,11 +260,11 @@ class AuthProvider with ChangeNotifier {
       _setError('Failed to send password reset email: $e');
     }
   }
-  
+
   // Refresh user data from Firestore
   Future<void> refreshUserData() async {
     if (_user == null) return;
-    
+
     try {
       final userData = await _authService.getUserData(_user!.id);
       if (userData != null) {
@@ -305,17 +316,20 @@ class AuthProvider with ChangeNotifier {
   /// Initialize user profile for personalized AI responses
   Future<void> _initializeUserProfile(UserModel userModel) async {
     try {
-      debugPrint('Initializing user profile for personalization: ${userModel.name}');
-      
+      debugPrint(
+          'Initializing user profile for personalization: ${userModel.name}');
+
       // Use the UserProfileService's getCurrentUserProfile method which handles
       // name synchronization between Firebase Auth, Firestore, and UserProfile
       final profile = await _profileService.getCurrentUserProfile();
-      
+
       if (profile != null) {
-        debugPrint('User profile initialized/loaded for personalization: ${profile.name}');
+        debugPrint(
+            'User profile initialized/loaded for personalization: ${profile.name}');
       } else {
-        debugPrint('Warning: Could not initialize user profile for personalization');
-        
+        debugPrint(
+            'Warning: Could not initialize user profile for personalization');
+
         // Fallback: try to create a profile manually
         try {
           await _profileService.initializeUserProfile(
@@ -325,7 +339,8 @@ class AuthProvider with ChangeNotifier {
             age: userModel.age,
             photoUrl: userModel.photoUrl,
           );
-          debugPrint('Fallback profile creation successful for: ${userModel.name}');
+          debugPrint(
+              'Fallback profile creation successful for: ${userModel.name}');
         } catch (fallbackError) {
           debugPrint('Fallback profile creation failed: $fallbackError');
         }
