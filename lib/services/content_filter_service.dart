@@ -34,8 +34,9 @@ class ContentFilterService {
     'anxiety', 'depression', 'stress', 'mood', 'mental', 'emotional', 'therapy',
     'counseling', 'wellness', 'mindfulness', 'meditation', 'breathing', 'panic',
     'worry', 'fear', 'sad', 'sadness', 'angry', 'anger', 'frustrated',
-    'overwhelmed', 'tired', 'exhausted', 'hopeless', 'lonely', 'isolated', 
-    'confused', 'upset', 'nervous', 'tense', 'restless', 'agitated', 'irritable', 'moody',
+    'overwhelmed', 'tired', 'exhausted', 'hopeless', 'lonely', 'isolated',
+    'confused', 'upset', 'nervous', 'tense', 'restless', 'agitated',
+    'irritable', 'moody',
 
     // Coping and self-care
     'coping', 'self-care', 'selfcare', 'relaxation', 'calm', 'peace', 'support',
@@ -65,12 +66,13 @@ class ContentFilterService {
     'recommendation', 'suggestion', 'technique', 'strategy',
 
     // Crisis and safety
-    'crisis', 'emergency', 'suicide', 'suicidal', 'self-harm', 'harm', 'danger', 'safe',
+    'crisis', 'emergency', 'suicide', 'suicidal', 'self-harm', 'harm', 'danger',
+    'safe',
     'safety', 'hotline', 'helpline', 'professional', 'therapist', 'counselor',
-    'doctor', 'psychiatrist', 'psychologist', 'kill myself', 'end my life', 
-    'want to die', 'end it all', 'not worth living', 'hurt myself', 'die', 
-    'death', 'can\'t go on', 'give up', 'better off dead', 'no point living', 
-    'ending it', 'taking my life', 'don\'t want to live', 'life is pointless', 
+    'doctor', 'psychiatrist', 'psychologist', 'kill myself', 'end my life',
+    'want to die', 'end it all', 'not worth living', 'hurt myself', 'die',
+    'death', 'can\'t go on', 'give up', 'better off dead', 'no point living',
+    'ending it', 'taking my life', 'don\'t want to live', 'life is pointless',
     'want to disappear', 'end my like', 'end like',
 
     // Social and emotional expressions (Less restrictive)
@@ -85,7 +87,8 @@ class ContentFilterService {
     'satisfaction', 'fulfillment', 'purpose', 'meaning',
 
     // General mental health interactions
-    'how are you', 'feeling today', 'better', 'worse', 'improve', 'getting better', 
+    'how are you', 'feeling today', 'better', 'worse', 'improve',
+    'getting better',
     'feeling bad', 'need help', 'support me', 'what should i do',
   };
 
@@ -156,10 +159,11 @@ class ContentFilterService {
     }
 
     final lowercaseQuery = query.toLowerCase();
-    
+
     // CRITICAL: Check for crisis keywords FIRST - these MUST be allowed
     if (_isCrisisRelated(lowercaseQuery)) {
-      debugPrint('🆘 CRISIS DETECTED: Query contains crisis keywords - ALLOWING for intervention');
+      debugPrint(
+          '🆘 CRISIS DETECTED: Query contains crisis keywords - ALLOWING for intervention');
       return QueryValidationResult(
         isValid: true,
         reason: QueryRejectionReason.none,
@@ -297,11 +301,31 @@ class ContentFilterService {
     if (wordCount <= 5) {
       // Very short responses - check if they're basic emotional words
       final basicEmotionalWords = [
-        'no', 'yes', 'okay', 'ok', 'fine', 'good', 'bad', 'sad', 'happy',
-        'angry', 'mad', 'tired', 'scared', 'worried', 'anxious', 'stressed',
-        'calm', 'peaceful', 'upset', 'hurt', 'confused', 'lost', 'empty'
+        'no',
+        'yes',
+        'okay',
+        'ok',
+        'fine',
+        'good',
+        'bad',
+        'sad',
+        'happy',
+        'angry',
+        'mad',
+        'tired',
+        'scared',
+        'worried',
+        'anxious',
+        'stressed',
+        'calm',
+        'peaceful',
+        'upset',
+        'hurt',
+        'confused',
+        'lost',
+        'empty'
       ];
-      
+
       for (final word in basicEmotionalWords) {
         if (query.toLowerCase().contains(word)) {
           debugPrint('🔄 Allowing short emotional word: "$query"');
@@ -317,20 +341,37 @@ class ContentFilterService {
   static bool _isCrisisRelated(String query) {
     // Direct crisis keywords
     final crisisKeywords = [
-      'suicide', 'suicidal', 'kill myself', 'end my life', 'end my like',
-      'want to die', 'end it all', 'not worth living', 'hurt myself',
-      'self harm', 'self-harm', 'die', 'death', 'can\'t go on', 'give up',
-      'better off dead', 'no point living', 'ending it', 'taking my life',
-      'don\'t want to live', 'life is pointless', 'want to disappear'
+      'suicide',
+      'suicidal',
+      'kill myself',
+      'end my life',
+      'end my like',
+      'want to die',
+      'end it all',
+      'not worth living',
+      'hurt myself',
+      'self harm',
+      'self-harm',
+      'die',
+      'death',
+      'can\'t go on',
+      'give up',
+      'better off dead',
+      'no point living',
+      'ending it',
+      'taking my life',
+      'don\'t want to live',
+      'life is pointless',
+      'want to disappear'
     ];
-    
+
     for (final keyword in crisisKeywords) {
       if (query.contains(keyword)) {
         debugPrint('🆘 CRISIS KEYWORD DETECTED: "$keyword" in query');
         return true;
       }
     }
-    
+
     // Crisis patterns for variations and typos
     final crisisPatterns = [
       r'\bend.*my.*life\b',
@@ -340,24 +381,26 @@ class ContentFilterService {
       r'\bkill.*myself\b',
       r'\bhurt.*myself\b',
       r'\bself.*harm\b',
-      r'\bcan['''']t.*go.*on\b',
+      r'\bcan['
+          ''']t.*go.*on\b',
       r'\bnot.*worth.*living\b',
       r'\bbetter.*off.*dead\b',
       r'\bno.*point.*living\b',
       r'\blife.*pointless\b',
-      r'\bdon['''']t.*want.*live\b',
+      r'\bdon['''
+          ']t.*want.*live\b',
       r'\bwant.*disappear\b',
       r'\bending.*it\b',
       r'\btaking.*my.*life\b',
     ];
-    
+
     for (final pattern in crisisPatterns) {
       if (RegExp(pattern, caseSensitive: false).hasMatch(query)) {
         debugPrint('🆘 CRISIS PATTERN DETECTED: "$pattern" matched in query');
         return true;
       }
     }
-    
+
     return false;
   }
 
