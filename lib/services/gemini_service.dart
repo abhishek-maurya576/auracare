@@ -223,7 +223,7 @@ class GeminiService {
     debugPrint('🧪 TESTING: Content filter validation for: "$query"');
     final result = ContentFilterService.validateQuery(query);
     ContentFilterService.logFilterDecision(query, result);
-    
+
     // Additional test logging
     debugPrint('📄 TEST RESULT:');
     debugPrint('   Input: "$query"');
@@ -233,14 +233,14 @@ class GeminiService {
     if (result.requiresGuidance) {
       debugPrint('   Guidance: "${result.guidanceMessage}"');
     }
-    
+
     return result;
   }
 
   /// Bulk test content filter with common examples
   static void runContentFilterTests() {
     debugPrint('🧪 RUNNING CONTENT FILTER TESTS...');
-    
+
     final testCases = [
       // Valid mental health queries
       'I feel anxious about work',
@@ -249,7 +249,7 @@ class GeminiService {
       'Can you help me with breathing exercises?',
       'I need support with my relationships',
       'How are you?',
-      
+
       // Invalid/irrelevant queries
       'What\'s the weather like?',
       'Tell me about sports scores',
@@ -257,19 +257,19 @@ class GeminiService {
       'What\'s the latest movie?',
       'Can you help me with programming?',
       'Tell me about cryptocurrency',
-      
+
       // Borderline cases
       'Hello',
       'Thank you',
       'I don\'t know what to say',
       'Tell me a joke',
     ];
-    
+
     for (final testCase in testCases) {
       testContentFilter(testCase);
       debugPrint('---');
     }
-    
+
     debugPrint('✅ CONTENT FILTER TESTS COMPLETED');
   }
 
@@ -334,7 +334,75 @@ class GeminiService {
     return contextString;
   }
 
-  /// Calculate profile completeness percentage for logging
+  /// Generate immediate crisis intervention response
+  Future<String> _generateCrisisResponse(String userMessage,
+      {String? userId}) async {
+    debugPrint(
+        '🆘 CRISIS INTERVENTION: Generating immediate response for crisis situation');
+
+    // Generate personalized context if available
+    String personalizedContext = '';
+    if (userId != null) {
+      final userProfile = getUserProfile(userId);
+      if (userProfile != null) {
+        personalizedContext =
+            '''\nUSER CONTEXT:\n- Name: ${userProfile.name}\n- I know you personally and care about you\n\n''';
+        debugPrint(
+            '🆘 Using personalized context for crisis response: ${userProfile.name}');
+      }
+    }
+
+    final prompt = '''
+You are Aura, a compassionate AI mental health companion. The user has expressed thoughts that indicate they may be in crisis or considering self-harm. This is a CRITICAL situation requiring immediate, caring intervention.
+
+$personalizedContext
+CRISIS MESSAGE: "$userMessage"
+
+You MUST respond with:
+1. Immediate validation of their feelings without judgment
+2. Clear statement that their life has value and they matter
+3. Gentle but urgent encouragement to seek immediate help
+4. Provide Indian crisis resources
+5. Offer to stay and talk with them
+6. Use their name if known to personalize the response
+
+Keep the response warm, caring, non-judgmental, and focused on immediate safety. This is for users in India.
+
+Respond as Aura with immediate crisis intervention:
+''';
+
+    try {
+      final response = await generateContent(prompt);
+
+      // Always add Indian crisis resources for any crisis situation
+      final crisisResponse = '''$response
+
+🆘 IMMEDIATE HELP AVAILABLE:
+• Vandrevala Foundation (24/7): 9999 666 555
+• AASRA Suicide Prevention: 91-22-27546669
+• Sneha Suicide Prevention (Chennai): 044-24640050
+• iCall Psychosocial Helpline: 9152987821
+• Sumaitri (Delhi): 011-23389090
+• Emergency Services: 112
+
+Please reach out to one of these numbers right now. You don't have to go through this alone. 💙''';
+
+      debugPrint('✅ CRISIS INTERVENTION: Response generated successfully');
+      return crisisResponse;
+    } catch (e) {
+      debugPrint('❌ CRISIS INTERVENTION ERROR: $e');
+      // Fallback crisis response if AI generation fails
+      return '''I can see you're going through something really difficult right now, and I want you to know that your life matters. Your feelings are valid, but please don't give up.
+
+🆘 Please reach out for immediate help:
+• Vandrevala Foundation (24/7): 9999 666 555
+• AASRA Suicide Prevention: 91-22-27546669
+• Emergency Services: 112
+
+You're not alone. There are people who care and want to help you through this. 💙''';
+    }
+  }
+
   double _calculateProfileCompleteness(UserProfile profile) {
     int completedFields = 0;
     int totalFields = 10;
@@ -520,19 +588,23 @@ class GeminiService {
     debugPrint('🔍 CONTENT FILTER: Validating mood analysis request');
     final validationResult = ContentFilterService.validateQuery(moodText);
     ContentFilterService.logFilterDecision(moodText, validationResult);
-    
+
     if (!validationResult.isValid) {
       debugPrint('❌ CONTENT FILTER: Mood analysis request rejected');
       return {
         'sentiment': 'neutral',
         'emotionalState': 'Request not processed',
         'supportiveMessage': validationResult.message,
-        'suggestedActions': ['Share your feelings', 'Talk about your emotions', 'Describe your mood'],
+        'suggestedActions': [
+          'Share your feelings',
+          'Talk about your emotions',
+          'Describe your mood'
+        ],
         'urgencyLevel': 'low',
         'keywords': ['guidance'],
       };
     }
-    
+
     debugPrint('✅ CONTENT FILTER: Mood analysis request approved');
 
     // Step 2: Generate personalized context if userId is provided and valid
@@ -556,7 +628,14 @@ class GeminiService {
     }
 
     final prompt = '''
-You are Aura, a compassionate AI companion for mental wellness. Analyze this mood entry and provide supportive guidance.
+You are Aura, a compassionate AI companion for mental wellness serving users in India. Analyze this mood entry and provide supportive guidance.
+
+CONTEXT FOR INDIAN USERS:
+- Use culturally appropriate language and references for India
+- Consider Indian family structures, social dynamics, and cultural values
+- Be sensitive to Indian cultural context around mental health
+- Suggest locally relevant coping strategies when possible
+- Understand that family and community support are important in Indian culture
 
 $personalizedContext
 
@@ -567,14 +646,14 @@ Please respond in JSON format with:
 {
   "sentiment": "positive/neutral/negative",
   "emotionalState": "brief description",
-  "supportiveMessage": "empathetic response (50-80 words) - personalize based on user profile if available",
-  "suggestedActions": ["action1", "action2", "action3"] - tailor to user's preferred coping strategies if known,
+  "supportiveMessage": "empathetic response (50-80 words) - personalize based on user profile if available, use culturally sensitive language for Indian context",
+  "suggestedActions": ["action1", "action2", "action3"] - tailor to user's preferred coping strategies if known, include culturally relevant suggestions,
   "urgencyLevel": "low/medium/high",
   "keywords": ["emotion1", "emotion2"],
   "personalizedInsights": "additional insights based on user profile and mood patterns if available"
 }
 
-Keep responses warm, supportive, and focused on mental wellness. Use personalized information to make suggestions more relevant. If the entry suggests severe distress, include crisis resources in suggestedActions.
+Keep responses warm, supportive, and focused on mental wellness. Use personalized information to make suggestions more relevant. Consider Indian cultural context in your advice. If the entry suggests severe distress, include appropriate crisis resources.
 ''';
 
     try {
@@ -624,7 +703,29 @@ Keep responses warm, supportive, and focused on mental wellness. Use personalize
     debugPrint('🔍 CONTENT FILTER: Validating chat message');
     final validationResult = ContentFilterService.validateQuery(userMessage);
     ContentFilterService.logFilterDecision(userMessage, validationResult);
-    
+
+    // CRITICAL: Handle crisis detection IMMEDIATELY
+    if (validationResult.isCrisis) {
+      debugPrint(
+          '🆘 CRISIS DETECTED: Generating immediate intervention response');
+
+      // Add to session history
+      if (sessionId != null) {
+        addToSessionHistory(sessionId, 'User', userMessage);
+      }
+
+      // Generate immediate crisis intervention response
+      final crisisResponse =
+          await _generateCrisisResponse(userMessage, userId: userId);
+
+      // Add crisis response to session history
+      if (sessionId != null) {
+        addToSessionHistory(sessionId, 'Aura', crisisResponse);
+      }
+
+      return crisisResponse;
+    }
+
     if (!validationResult.isValid) {
       debugPrint('❌ CONTENT FILTER: Chat message rejected');
       // Add rejection message to session history if sessionId provided
@@ -634,9 +735,9 @@ Keep responses warm, supportive, and focused on mental wellness. Use personalize
       }
       return validationResult.message;
     }
-    
+
     debugPrint('✅ CONTENT FILTER: Chat message approved');
-    
+
     // Add guidance message if needed
     String guidancePrefix = '';
     if (validationResult.requiresGuidance) {
@@ -714,6 +815,14 @@ Keep responses warm, supportive, and focused on mental wellness. Use personalize
     // Add conversation memory and personalization instructions
     systemPrompt += '''
 
+CONTEXT FOR INDIAN USERS:
+- You are serving users in India - use culturally appropriate language and references
+- Consider Indian family structures, social dynamics, and cultural values
+- Be sensitive to Indian cultural context around mental health and seeking help
+- Suggest locally relevant coping strategies when possible
+- Understand that family and community support are important in Indian culture
+- Use supportive, warm tone appropriate for Indian users
+
 IMPORTANT MEMORY INSTRUCTIONS:
 - You MUST remember and reference details from the conversation history below
 - If the user mentions their name, preferences, feelings, or any personal information in previous messages, acknowledge and remember these details
@@ -726,7 +835,7 @@ $historyContext
 
 Current User Message: $userMessage
 
-Respond as Aura with empathy and support, taking into account ALL previous conversation details, personalized context, and age-appropriate communication style:
+Respond as Aura with empathy and support, taking into account ALL previous conversation details, personalized context, age-appropriate communication style, and Indian cultural context:
 ''';
 
     final prompt = systemPrompt;
@@ -738,8 +847,8 @@ Respond as Aura with empathy and support, taking into account ALL previous conve
         YouthContentService.filterContentForAge(response, ageCategory);
 
     // Add guidance prefix if needed
-    final finalResponse = guidancePrefix.isNotEmpty 
-        ? '$guidancePrefix$filteredResponse' 
+    final finalResponse = guidancePrefix.isNotEmpty
+        ? '$guidancePrefix$filteredResponse'
         : filteredResponse;
 
     // Add AI response to session history if sessionId is provided
@@ -753,24 +862,26 @@ Respond as Aura with empathy and support, taking into account ALL previous conve
   // Generate daily wellness tips
   Future<String> generateDailyTip() async {
     debugPrint('💡 CONTENT FILTER: Generating mental health wellness tip');
-    
+
     final prompt = '''
-Generate a brief, actionable mental wellness tip for today. The tip should be:
-- Practical and easy to implement
+Generate a brief, actionable mental wellness tip for today specifically for users in India. The tip should be:
+- Practical and easy to implement in Indian context
 - Focused on mental health and emotional wellbeing
 - Positive and encouraging
 - 30-50 words maximum
 - ONLY about mental health, wellness, mindfulness, or emotional support
+- Culturally appropriate for Indian users
+- Consider Indian lifestyle, family structures, and cultural practices
 
-Examples of good tips:
-- Mindfulness exercises
-- Breathing techniques
-- Gratitude practices
-- Self-care activities
-- Stress management
-- Positive thinking strategies
+Examples of good tips for Indian context:
+- Mindfulness exercises that can be done at home
+- Breathing techniques (pranayama-inspired)
+- Gratitude practices suitable for Indian families
+- Self-care activities within Indian cultural context
+- Stress management for Indian work/study culture
+- Positive thinking strategies with cultural relevance
 
-Generate one unique mental health tip:
+Generate one unique mental health tip for Indian users:
 ''';
 
     final tip = await generateContent(prompt);
@@ -785,9 +896,10 @@ Generate one unique mental health tip:
     String? userId,
   }) async {
     // Content filtering for mood input
-    debugPrint('🔍 CONTENT FILTER: Validating affirmations request for mood: $mood');
+    debugPrint(
+        '🔍 CONTENT FILTER: Validating affirmations request for mood: $mood');
     final validationResult = ContentFilterService.validateQuery(mood);
-    
+
     if (!validationResult.isValid) {
       debugPrint('❌ CONTENT FILTER: Affirmations request rejected');
       return [
@@ -796,7 +908,7 @@ Generate one unique mental health tip:
         'I deserve to feel better and find peace',
       ];
     }
-    
+
     debugPrint('✅ CONTENT FILTER: Affirmations request approved');
 
     // Generate personalized context if userId is provided and valid
@@ -828,9 +940,15 @@ USER CONTEXT FOR PERSONALIZATION:
     }
 
     final prompt = '''
-Create $count personalized positive affirmations for someone feeling "$mood". 
+Create $count personalized positive affirmations for someone feeling "$mood" in an Indian cultural context.
 
 $personalizedContext
+CULTURAL CONTEXT FOR INDIA:
+- Consider Indian values of resilience, family support, and inner strength
+- Use language that resonates with Indian cultural understanding
+- Include concepts of dharma (purpose), inner peace, and spiritual strength if appropriate
+- Be sensitive to Indian cultural perspectives on mental wellness
+
 Requirements:
 - Each affirmation should be encouraging and uplifting
 - Use "I am" or "I can" statements
@@ -839,6 +957,7 @@ Requirements:
 - Focus on strength, resilience, and self-compassion
 - If user context is provided, incorporate their strengths and goals
 - Use their preferred name if available
+- Consider Indian cultural values in the affirmations
 
 Return only the affirmations, one per line:
 ''';
@@ -965,7 +1084,28 @@ Suggested quick replies:
       debugPrint('🔍 CONTENT FILTER: Validating sendMessageToAI request');
       final validationResult = ContentFilterService.validateQuery(userMessage);
       ContentFilterService.logFilterDecision(userMessage, validationResult);
-      
+
+      // CRITICAL: Handle crisis detection IMMEDIATELY
+      if (validationResult.isCrisis) {
+        debugPrint(
+            '🆘 CRISIS DETECTED in sendMessageToAI: Generating immediate intervention response');
+
+        // Add to session history
+        if (sessionId != null) {
+          addToSessionHistory(sessionId, 'User', userMessage);
+        }
+
+        // Generate immediate crisis intervention response
+        final crisisResponse = await _generateCrisisResponse(userMessage);
+
+        // Add crisis response to session history
+        if (sessionId != null) {
+          addToSessionHistory(sessionId, 'Aura', crisisResponse);
+        }
+
+        return crisisResponse;
+      }
+
       if (!validationResult.isValid) {
         debugPrint('❌ CONTENT FILTER: sendMessageToAI request rejected');
         // Add to session history if sessionId provided
@@ -975,9 +1115,9 @@ Suggested quick replies:
         }
         return validationResult.message;
       }
-      
+
       debugPrint('✅ CONTENT FILTER: sendMessageToAI request approved');
-      
+
       final stressLevel = detectStressLevel(userMessage);
 
       // Use session-based history for better memory
@@ -1004,7 +1144,15 @@ Suggested quick replies:
         }
 
         final prompt = '''
-You are Aura, a compassionate AI companion for mental wellness. 
+You are Aura, a compassionate AI companion for mental wellness serving users in India.
+
+CONTEXT FOR INDIAN USERS:
+- Use culturally appropriate language and references for India
+- Consider Indian family structures, social dynamics, and cultural values
+- Be sensitive to Indian cultural context around mental health and seeking help
+- Suggest locally relevant coping strategies when possible
+- Use supportive, warm tone appropriate for Indian users
+- Understand that family and community support are important in Indian culture
 
 IMPORTANT: You MUST remember and reference details from the conversation history. If the user mentioned their name, feelings, or personal information in previous messages, acknowledge these details.
 
@@ -1020,6 +1168,8 @@ Please provide a supportive, empathetic response that:
 - Keeps responses warm and conversational (100-150 words)
 - Includes gentle suggestions for professional help if stress level >= 8
 - Suggests immediate calming activities if stress level >= 7
+- Uses culturally sensitive language for Indian context
+- Considers Indian family and social structures in advice
 
 Respond as Aura:
 ''';
@@ -1027,29 +1177,27 @@ Respond as Aura:
         final aiReply = await generateContent(prompt);
 
         // Add guidance and format final response
-        String finalReply = guidancePrefix.isNotEmpty 
-            ? '$guidancePrefix$aiReply' 
-            : aiReply;
+        String finalReply =
+            guidancePrefix.isNotEmpty ? '$guidancePrefix$aiReply' : aiReply;
 
         // Add AI response to session history
         addToSessionHistory(sessionId, 'Aura', finalReply);
 
-        // Add crisis resources for high stress levels
+        // Add India-specific crisis resources for high stress levels
         if (stressLevel >= 7) {
           finalReply +=
-              '\n\n💡 I sense you\'re under high stress. Please take a walk outside or visit a nearby park/garden. You\'re not alone, and talking with someone close can help.';
+              '\n\n💡 I sense you\'re under high stress. Please take a moment to breathe deeply, step outside for fresh air, or reach out to a trusted family member or friend. You\'re not alone in this journey.';
         }
 
         if (stressLevel >= 8) {
           finalReply +=
-              '\n\n🆘 If you\'re in crisis, please reach out to:\n• National Suicide Prevention Lifeline: 988\n• Crisis Text Line: Text HOME to 741741\n• Your local emergency services: 911';
+              '\n\n🆘 If you\'re in crisis, please reach out for immediate help:\n• Vandrevala Foundation (24/7): 9999 666 555\n• AASRA Suicide Prevention: 91-22-27546669\n• Sneha Suicide Prevention (Chennai): 044-24640050\n• iCall Psychosocial Helpline: 9152987821\n• Sumaitri (Delhi): 011-23389090\n• Emergency Services: 112';
         }
 
         return finalReply;
       } else {
         // Fallback to filtered generateChatResponse method
-        return await generateChatResponse(userMessage,
-            sessionId: sessionId);
+        return await generateChatResponse(userMessage, sessionId: sessionId);
       }
     } catch (e) {
       debugPrint('AI Error: $e');

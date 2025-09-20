@@ -65,3 +65,24 @@ android\app\google-services.json.example
 .zencoder
 scripts
 .github
+
+# Flutter/Dart
+/build/
+/.dart_tool/
+/.packages
+/pubspec.lock
+
+# Test outputs (exclude these)
+/coverage/
+*.lcov
+/test/coverage/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
